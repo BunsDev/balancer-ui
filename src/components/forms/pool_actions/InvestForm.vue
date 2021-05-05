@@ -263,6 +263,8 @@ type DataProps = {
   propToken: number;
   range: number;
   highPiAccepted: boolean;
+  includeUserBalance: boolean;
+  userBalances: number[];
 };
 
 export default defineComponent({
