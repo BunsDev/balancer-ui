@@ -7,7 +7,7 @@
           class="text-lg font-normal text-white opacity-90 font-body mb-2"
         />
         <BalLoadingBlock
-          v-if="isLoadingPoolsWithShares"
+          v-if="isLoadingUserPools"
           class="h-10 w-40 mx-auto"
           white
         />
@@ -21,7 +21,7 @@
           class="text-white text-bold text-center"
         />
         <div class="flex justify-center mt-4">
-          <BalBtn color="white" class="mr-4" @click="setAccountModal(true)">
+          <BalBtn color="white" class="mr-4" @click="onClickConnect">
             {{ $t('connectWallet') }}
           </BalBtn>
           <BalBtn
@@ -31,6 +31,7 @@
             rel="noreferrer"
             color="white"
             outline
+            @click="trackGoal(Goals.ClickHeroLearnMore)"
           >
             {{ $t('learnMore') }}
             <BalIcon name="external-link" size="sm" class="ml-2" />
@@ -47,9 +48,10 @@ import { useStore } from 'vuex';
 
 import useNumbers from '@/composables/useNumbers';
 import useWeb3 from '@/composables/useWeb3';
-import usePoolsWithShares from '@/composables/pools/usePools';
+import usePools from '@/composables/pools/usePools';
 
 import { EXTERNAL_LINKS } from '@/constants/links';
+import useFathom from '@/composables/useFathom';
 
 export default defineComponent({
   name: 'AppHero',
@@ -59,10 +61,8 @@ export default defineComponent({
     const store = useStore();
     const { fNum } = useNumbers();
     const { isConnected } = useWeb3();
-    const {
-      totalInvestedAmount,
-      isLoadingPoolsWithShares
-    } = usePoolsWithShares();
+    const { trackGoal, Goals } = useFathom();
+    const { totalInvestedAmount, isLoadingUserPools } = usePools();
 
     // COMPUTED
     const setAccountModal = (val: boolean) =>
@@ -73,10 +73,16 @@ export default defineComponent({
       ['h-40']: isConnected.value
     }));
 
+    function onClickConnect() {
+      setAccountModal(true);
+      trackGoal(Goals.ClickHeroConnectWallet);
+    }
+
     return {
       // data
       totalInvestedAmount,
-      isLoadingPoolsWithShares,
+      isLoadingUserPools,
+      Goals,
 
       // computed
       isConnected,
@@ -85,6 +91,8 @@ export default defineComponent({
       // methods
       setAccountModal,
       fNum,
+      onClickConnect,
+      trackGoal,
       // constants
       EXTERNAL_LINKS
     };

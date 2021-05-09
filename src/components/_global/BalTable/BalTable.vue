@@ -88,6 +88,17 @@
         </tr>
       </tbody>
     </table>
+    <div
+      v-if="isPaginated && !isLoading"
+      class="bal-table-pagination-btn"
+      @click="!isLoadingMore && $emit('loadMore')"
+    >
+      <template v-if="isLoadingMore">{{ $t('loading') }}</template>
+      <template v-else
+        >{{ $t('loadMore') }}
+        <BalIcon name="chevron-down" size="sm" class="ml-2"
+      /></template>
+    </div>
   </div>
 </template>
 
@@ -135,6 +146,8 @@ export type ColumnDefinition<T = Data> = {
 export default defineComponent({
   name: 'BalTable',
 
+  emits: ['loadMore'],
+
   props: {
     columns: {
       type: Object as PropType<ColumnDefinition[]>,
@@ -147,6 +160,10 @@ export default defineComponent({
       type: Boolean,
       default: () => false
     },
+    isLoadingMore: {
+      type: Boolean,
+      default: false
+    },
     skeletonClass: {
       type: String
     },
@@ -155,6 +172,10 @@ export default defineComponent({
     },
     sticky: {
       type: String as PropType<Sticky>
+    },
+    isPaginated: {
+      type: Boolean,
+      default: false
     }
   },
   setup(props) {
@@ -186,6 +207,11 @@ export default defineComponent({
     };
 
     const handleSort = (columnId: string) => {
+      const column = props.columns.find(column => column.id === columnId);
+      if (!column?.sortKey) {
+        return;
+      }
+
       currentSortColumn.value = columnId;
       if (currentSortDirection.value === null) {
         currentSortDirection.value = 'asc';
@@ -195,16 +221,16 @@ export default defineComponent({
         currentSortDirection.value = null;
       }
 
-      const column = props.columns.find(column => column.id === columnId);
-      if (column?.sortKey) {
-        const sortedData = sortBy(props.data, column.sortKey);
-        if (currentSortDirection.value === 'asc') {
-          tableData.value = sortedData;
-        } else if (currentSortDirection.value === 'desc') {
-          tableData.value = sortedData.reverse();
-        }
+      const sortedData = sortBy(
+        (props.data as any).value || props.data,
+        column.sortKey
+      );
+      if (currentSortDirection.value === 'asc') {
         tableData.value = sortedData;
+      } else if (currentSortDirection.value === 'desc') {
+        tableData.value = sortedData.reverse();
       }
+      tableData.value = sortedData;
     };
 
     onMounted(() => {
@@ -286,5 +312,12 @@ export default defineComponent({
 
 .rowBg:hover > td {
   @apply bg-gray-50;
+}
+
+.bal-table-pagination-btn {
+  @apply flex items-center justify-center h-16;
+  @apply text-gray-500 font-medium hover:text-gray-800;
+  @apply border-t rounded-b-lg;
+  @apply hover:bg-gray-50 cursor-pointer;
 }
 </style>
