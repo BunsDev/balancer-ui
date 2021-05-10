@@ -462,7 +462,7 @@ export default defineComponent({
     }
 
     async function getUserBalances() {
-      data.userBalances = await poolExchange.getUserBalance(
+      data.userBalances = await poolExchange.value.getUserBalance(
         account.value,
         props.pool.tokenAddresses
       );
