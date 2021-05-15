@@ -257,7 +257,7 @@ import {
   isPositive,
   isLessThanOrEqualTo,
   isRequired
-} from '@/utils/validations';
+} from '@/lib/utils/validations';
 import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { TransactionData } from 'bnc-notify';
@@ -274,7 +274,7 @@ import useTokens from '@/composables/useTokens';
 
 import PoolExchange from '@/services/pool/exchange';
 import PoolCalculator from '@/services/pool/calculator';
-import { bnum } from '@/utils';
+import { bnum } from '@/lib/utils';
 import FormTypeToggle from './shared/FormTypeToggle.vue';
 import { FullPool } from '@/services/balancer/subgraph/types';
 import useFathom from '@/composables/useFathom';
