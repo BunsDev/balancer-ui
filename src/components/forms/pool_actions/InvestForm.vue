@@ -150,17 +150,13 @@
           }"
           class="text-xs text-gray-500 underline"
         >
-          Wrap your ETH to WETH
+          {{ $t('wrapInstruction') }}
         </router-link>
         <BalTooltip>
           <template v-slot:activator>
             <BalIcon name="info" size="xs" class="text-gray-400 ml-2" />
           </template>
-          <div class="w-52">
-            This pool requires Wrapped Ether (WETH). To maximize your
-            investment, you could wrap some additional ETH. Make sure to keep
-            enough ETH to cover gas costs.
-          </div>
+          <div class="w-52" v-html="ethBufferInstruction" />
         </BalTooltip>
       </div>
     </div>
@@ -410,7 +406,7 @@ export default defineComponent({
       const maxAmount = tokenBalance(data.propToken);
 
       if (currentAmount === '0') return 0;
-      return Math.ceil((Number(currentAmount) / maxAmount) * 100);
+      return Math.ceil((Number(currentAmount) / Number(maxAmount)) * 100);
     });
 
     const fullAmounts = computed(() => {
@@ -486,7 +482,7 @@ export default defineComponent({
             allTokens.value[props.pool.tokenAddresses[index]].decimals
           )
         );
-        balance = bnum(balance).plus(units);
+        balance = bnum(balance).plus(units).toString();
       }
 
       return balance;
@@ -517,7 +513,7 @@ export default defineComponent({
       return isAuthenticated.value
         ? [
             isPositive(),
-            isLessThanOrEqualTo(tokenBalance(index), t('exceedsBalance'))
+            isLessThanOrEqualTo(Number(tokenBalance(index)), t('exceedsBalance'))
           ]
         : [isPositive()];
     }

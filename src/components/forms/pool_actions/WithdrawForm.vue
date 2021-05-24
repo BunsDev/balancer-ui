@@ -450,7 +450,7 @@ export default defineComponent({
     }
 
     function setPropMax() {
-      if (!isAuthenticated.value || bptBalance.value === 0) return;
+      if (!isAuthenticated.value || Number(bptBalance.value) === 0) return;
 
       const { send, receive } = poolCalculator.propAmountsGiven(
         bptBalance.value,
@@ -529,7 +529,7 @@ export default defineComponent({
         const tx = await poolExchange.value.exit(
           store.state.web3.account,
           amountsOut.value,
-          bptIn.value,
+          `${bptIn.value}`,
           exitTokenIndex.value,
           exactOut.value,
           data.includeUserBalance
