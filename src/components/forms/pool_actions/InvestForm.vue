@@ -482,7 +482,9 @@ export default defineComponent({
             allTokens.value[props.pool.tokenAddresses[index]].decimals
           )
         );
-        balance = bnum(balance).plus(units).toString();
+        balance = bnum(balance)
+          .plus(units)
+          .toString();
       }
 
       return balance;
@@ -513,7 +515,10 @@ export default defineComponent({
       return isAuthenticated.value
         ? [
             isPositive(),
-            isLessThanOrEqualTo(Number(tokenBalance(index)), t('exceedsBalance'))
+            isLessThanOrEqualTo(
+              Number(tokenBalance(index)),
+              t('exceedsBalance')
+            )
           ]
         : [isPositive()];
     }
