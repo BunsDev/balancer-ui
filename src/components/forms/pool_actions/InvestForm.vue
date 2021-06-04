@@ -156,7 +156,7 @@
           <template v-slot:activator>
             <BalIcon name="info" size="xs" class="text-gray-400 ml-2" />
           </template>
-          <div class="w-52" v-html="ethBufferInstruction" />
+          <div class="w-52" v-html="$t('ethBufferInstruction')" />
         </BalTooltip>
       </div>
     </div>
@@ -202,7 +202,7 @@
         </div>
         <BalBtn
           v-if="requireApproval"
-          :label="$t('approveTokens')"
+          :label="`${$t('approve')} ${symbolFor(requiredAllowances[0])}`"
           :loading="approving"
           :loading-label="$t('approving')"
           :disabled="!hasAmounts || !hasValidInputs"
@@ -215,7 +215,7 @@
             v-model="highPiAccepted"
             :rules="[isRequired(this.$t('priceImpactCheckbox'))]"
             name="highPiAccepted"
-            class="text-gray-500 mb-8"
+            class="text-gray-500 mb-12"
             size="sm"
             :label="$t('priceImpactAccept')"
           />
@@ -523,6 +523,10 @@ export default defineComponent({
         : [isPositive()];
     }
 
+    function symbolFor(token) {
+      return allTokens.value[token]?.symbol || '';
+    }
+
     function connectWallet() {
       store.commit('web3/setAccountModal', true);
     }
@@ -688,6 +692,7 @@ export default defineComponent({
       hasAmounts,
       approving,
       requireApproval,
+      requiredAllowances,
       tokenWeights,
       tokenBalance,
       amountRules,
@@ -709,7 +714,8 @@ export default defineComponent({
       approveAllowances,
       fNum,
       preventOverflow,
-      trackGoal
+      trackGoal,
+      symbolFor
     };
   }
 });

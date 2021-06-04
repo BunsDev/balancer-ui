@@ -18,6 +18,7 @@
             :disabled="disabled"
             @blur="onBlur"
             @input="onInput"
+            @keydown="blockInvalidChar"
           />
           <div v-if="$slots.info || info" :class="['info', infoClasses]">
             <slot name="info">
@@ -127,6 +128,12 @@ export default defineComponent({
       emit('update:modelValue', event.target.value);
     }
 
+    function blockInvalidChar(event): void {
+      if (props.type === 'number') {
+        ['e', 'E', '+', '-'].includes(event.key) && event.preventDefault();
+      }
+    }
+
     watchEffect(() => {
       if (validateOn.value === 'input') validate(props.modelValue);
     });
@@ -153,7 +160,7 @@ export default defineComponent({
         case 'lg':
           return 'h-18';
         default:
-          return 'h-14';
+          return 'h-12';
       }
     };
 
@@ -219,7 +226,8 @@ export default defineComponent({
       inputClasses,
       appendClasses,
       prependClasses,
-      infoClasses
+      infoClasses,
+      blockInvalidChar
     };
   }
 });
