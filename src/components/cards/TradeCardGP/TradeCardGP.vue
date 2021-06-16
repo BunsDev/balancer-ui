@@ -104,7 +104,6 @@ import {
   normalizeTokenAddress
 } from '@/services/gnosis/utils';
 
-const DEFAULT_TRANSACTION_DEADLINE_IN_MINUTES = 20 * 60;
 // TODO: get app id
 const GNOSIS_APP_ID = 1;
 
@@ -204,6 +203,10 @@ export default defineComponent({
       return t('trade');
     });
 
+    const appTransactionDeadline = computed<number>(
+      () => store.state.app.transactionDeadline
+    );
+
     const orderKind = computed(
       () => (isSell.value ? OrderKind.SELL : OrderKind.BUY) as OrderKind
     );
@@ -279,8 +282,7 @@ export default defineComponent({
             tokenOutAmount.value,
             tokenOutDecimals.value
           ).toString(),
-          validTo: calculateValidTo(DEFAULT_TRANSACTION_DEADLINE_IN_MINUTES),
-          // TODO: get app id
+          validTo: calculateValidTo(appTransactionDeadline.value),
           appData,
           feeAmount: feeQuote.value?.amount || '0',
           kind: orderKind.value,
@@ -312,21 +314,20 @@ export default defineComponent({
     }
 
     async function updateQuotes() {
-      feeExceedsPrice.value = false;
-
       const tokenAmount = isSell.value ? tokenInAmount : tokenOutAmount;
       const otherTokenAmount = isSell.value ? tokenOutAmount : tokenInAmount;
-      const tokenDecimals = isSell.value
-        ? tokenInDecimals.value
-        : tokenOutDecimals.value;
-
-      const sellToken = tokenInAddress.value;
-      const buyToken = tokenOutAddress.value;
-      const kind = orderKind.value;
-
-      let amountToExchange = parseUnits(tokenAmount.value, tokenDecimals);
 
       if (parseFloat(tokenAmount.value) > 0) {
+        feeExceedsPrice.value = false;
+
+        const tokenDecimals = isSell.value
+          ? tokenInDecimals.value
+          : tokenOutDecimals.value;
+
+        const sellToken = tokenInAddress.value;
+        const buyToken = tokenOutAddress.value;
+        const kind = orderKind.value;
+        let amountToExchange = parseUnits(tokenAmount.value, tokenDecimals);
         try {
           // TODO: there is a chance to optimize here and not make a new request if the fee is not expired
           const feeQuoteResult = await gnosisOperator.getFeeQuote({
@@ -389,6 +390,8 @@ export default defineComponent({
     });
 
     watch(blockNumber, async () => {
+      updateQuotes();
+
       if (orderId.value != '') {
         const order = await gnosisOperator.getOrder(orderId.value);
         if (isOrderFinalized(order)) {
