@@ -34,7 +34,8 @@
       <BalBtn
         :label="'Preview trade'"
         :disabled="tradeDisabled"
-        :loading-label="$t('confirming')"
+        :loading="updatingQuotes"
+        :loading-label="!updatingQuotes && $t('confirming')"
         color="gradient"
         block
         @click.prevent="modalTradePreviewIsOpen = true"
@@ -125,6 +126,7 @@ export default defineComponent({
     const feeExceedsPrice = ref(false);
     const orderId = ref('');
     const orderMetadata = ref<OrderMetaData | null>(null);
+    const updatingQuotes = ref(false);
     const store = useStore();
     const router = useRouter();
     const auth = useAuth();
@@ -317,7 +319,8 @@ export default defineComponent({
       const tokenAmount = isSell.value ? tokenInAmount : tokenOutAmount;
       const otherTokenAmount = isSell.value ? tokenOutAmount : tokenInAmount;
 
-      if (parseFloat(tokenAmount.value) > 0) {
+      if (tokenAmount.value !== '' && parseFloat(tokenAmount.value) > 0) {
+        updatingQuotes.value = true;
         feeExceedsPrice.value = false;
 
         const tokenDecimals = isSell.value
@@ -370,6 +373,7 @@ export default defineComponent({
         } catch (e) {
           console.log('[Gnosis Quotes] Failed to update quotes', e);
         }
+        updatingQuotes.value = false;
       }
     }
 
@@ -382,11 +386,19 @@ export default defineComponent({
     });
 
     watch(tokenInAmount, () => {
-      updateQuotes();
+      if (tokenInAmount.value !== '') {
+        updateQuotes();
+      } else {
+        tokenOutAmount.value = '';
+      }
     });
 
     watch(tokenOutAmount, async () => {
-      updateQuotes();
+      if (tokenOutAmount.value !== '') {
+        updateQuotes();
+      } else {
+        tokenInAmount.value = '';
+      }
     });
 
     watch(blockNumber, async () => {
@@ -407,6 +419,7 @@ export default defineComponent({
     populateInitialTokens();
 
     return {
+      updatingQuotes,
       highPiAccepted,
       title,
       error,
