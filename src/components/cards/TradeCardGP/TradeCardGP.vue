@@ -32,10 +32,9 @@
         @actionClick="handleErrorButtonClick"
       />
       <BalBtn
-        :label="'Preview trade'"
+        :label="$t('previewTrade')"
         :disabled="tradeDisabled"
-        :loading="updatingQuotes"
-        :loading-label="!updatingQuotes && $t('confirming')"
+        :loading-label="$t('confirming')"
         color="gradient"
         block
         @click.prevent="modalTradePreviewIsOpen = true"
@@ -58,9 +57,11 @@
       :address-out="tokenOutAddress"
       :amount-out="tokenOutAmount"
       :trading="trading"
+      :order-id="orderId"
+      :formatted-fee-amount="formattedFeeAmount"
+      :is-sell="isSell"
       @trade="trade"
       @close="modalTradePreviewIsOpen = false"
-      :order-id="orderId"
     />
   </teleport>
 </template>
@@ -176,6 +177,11 @@ export default defineComponent({
         tokens.value[tokenOutAddress.value]?.decimals ?? DEFAULT_TOKEN_DECIMALS
     );
 
+    const feeAmount = computed(() => feeQuote.value?.amount || '0');
+    const formattedFeeAmount = computed(() =>
+      formatUnits(feeAmount.value, tokenInDecimals.value)
+    );
+
     const tradeDisabled = computed(() => {
       if (
         errorMessage.value !== TradeValidation.VALID ||
@@ -286,7 +292,7 @@ export default defineComponent({
           ).toString(),
           validTo: calculateValidTo(appTransactionDeadline.value),
           appData,
-          feeAmount: feeQuote.value?.amount || '0',
+          feeAmount: feeAmount.value,
           kind: orderKind.value,
           receiver: account.value,
           partiallyFillable: false // Always fill or kill
@@ -420,6 +426,7 @@ export default defineComponent({
 
     return {
       updatingQuotes,
+      formattedFeeAmount,
       highPiAccepted,
       title,
       error,
