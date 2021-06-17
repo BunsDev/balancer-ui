@@ -12,13 +12,13 @@
         :token-in-address-input="tokenInAddress"
         :token-out-amount-input="tokenOutAmount"
         :token-out-address-input="tokenOutAddress"
-        :is-sell="isSell"
+        :exact-in="exactIn"
         :price-impact="0"
         @token-in-amount-change="value => (tokenInAmount = value)"
         @token-in-address-change="value => (tokenInAddress = value)"
         @token-out-amount-change="value => (tokenOutAmount = value)"
         @token-out-address-change="value => (tokenOutAddress = value)"
-        @is-sell-change="value => (isSell = value)"
+        @exact-in-change="value => (exactIn = value)"
       />
       <BalAlert
         v-if="error"
@@ -59,7 +59,7 @@
       :trading="trading"
       :order-id="orderId"
       :formatted-fee-amount="formattedFeeAmount"
-      :is-sell="isSell"
+      :exact-in="exactIn"
       @trade="trade"
       @close="modalTradePreviewIsOpen = false"
     />
@@ -122,7 +122,7 @@ export default defineComponent({
   setup() {
     const highPiAccepted = ref(false);
     const priceImpact = ref(0);
-    const isSell = ref(true);
+    const exactIn = ref(true);
     const feeQuote = ref<FeeInformation | null>(null);
     const feeExceedsPrice = ref(false);
     const orderId = ref('');
@@ -216,7 +216,7 @@ export default defineComponent({
     );
 
     const orderKind = computed(
-      () => (isSell.value ? OrderKind.SELL : OrderKind.BUY) as OrderKind
+      () => (exactIn.value ? OrderKind.SELL : OrderKind.BUY) as OrderKind
     );
 
     const error = computed(() => {
@@ -322,14 +322,14 @@ export default defineComponent({
     }
 
     async function updateQuotes() {
-      const tokenAmount = isSell.value ? tokenInAmount : tokenOutAmount;
-      const otherTokenAmount = isSell.value ? tokenOutAmount : tokenInAmount;
+      const tokenAmount = exactIn.value ? tokenInAmount : tokenOutAmount;
+      const otherTokenAmount = exactIn.value ? tokenOutAmount : tokenInAmount;
 
       if (tokenAmount.value !== '' && parseFloat(tokenAmount.value) > 0) {
         updatingQuotes.value = true;
         feeExceedsPrice.value = false;
 
-        const tokenDecimals = isSell.value
+        const tokenDecimals = exactIn.value
           ? tokenInDecimals.value
           : tokenOutDecimals.value;
 
@@ -347,7 +347,7 @@ export default defineComponent({
           });
 
           if (feeQuoteResult != null) {
-            if (isSell.value) {
+            if (exactIn.value) {
               // deduct fee if its a sell order
               amountToExchange = amountToExchange.sub(feeQuoteResult.amount);
 
@@ -365,7 +365,7 @@ export default defineComponent({
                 feeQuote.value = feeQuoteResult;
 
                 otherTokenAmount.value = formatUnits(
-                  isSell.value
+                  exactIn.value
                     ? priceQuoteResult.amount
                     : // add the fee for buy orders
                       BigNumber.from(priceQuoteResult.amount)
@@ -442,7 +442,7 @@ export default defineComponent({
       isRequired,
       tradeDisabled,
       TradeSettingsContext,
-      isSell,
+      exactIn,
       trade,
       trading,
       orderId,

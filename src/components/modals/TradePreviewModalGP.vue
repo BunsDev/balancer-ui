@@ -128,12 +128,9 @@ export default defineComponent({
     orderId: {
       type: String
     },
-    isSell: {
-      type: Boolean,
-      required: true
-    },
     formattedFeeAmount: {
-      type: String
+      type: String,
+      required: true
     }
   },
   setup(props, { emit }) {
