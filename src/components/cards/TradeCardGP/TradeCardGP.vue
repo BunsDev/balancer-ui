@@ -91,7 +91,7 @@ import TradePairGP from './TradePairGP.vue';
 import { formatUnits, parseUnits } from '@ethersproject/units';
 import { DEFAULT_TOKEN_DECIMALS } from '@/constants/tokens';
 import { FeeInformation, OrderMetaData } from '@/services/gnosis/types';
-import { BigNumber } from '@ethersproject/bignumber';
+import { BigNumber as EthersBigNumber } from '@ethersproject/bignumber';
 import useTokenApprovalGP from '@/composables/trade/useTokenApprovalGP';
 import {
   signOrder,
@@ -105,6 +105,7 @@ import {
   isOrderFinalized,
   normalizeTokenAddress
 } from '@/services/gnosis/utils';
+import { bnum } from '@/lib/utils';
 
 // TODO: get app id
 const GNOSIS_APP_ID = 1;
@@ -139,6 +140,9 @@ export default defineComponent({
       store.getters['registry/getTokens'](params);
     const getConfig = () => store.getters['web3/getConfig']();
     const tokens = computed(() => getTokens({ includeEther: true }));
+    const slippageBufferRate = computed(() =>
+      parseFloat(store.state.app.slippage)
+    );
 
     const tokenInAddress = ref('');
     const tokenInAmount = ref('');
@@ -286,7 +290,9 @@ export default defineComponent({
             .sub(feeAmount.value)
             .toString(),
           buyAmount: parseUnits(
-            tokenOutAmount.value,
+            bnum(tokenOutAmount.value)
+              .div(1 + slippageBufferRate.value)
+              .toString(),
             tokenOutDecimals.value
           ).toString(),
           validTo: calculateValidTo(appTransactionDeadline.value),
@@ -367,7 +373,7 @@ export default defineComponent({
                   exactIn.value
                     ? priceQuoteResult.amount
                     : // add the fee for buy orders
-                      BigNumber.from(priceQuoteResult.amount)
+                      EthersBigNumber.from(priceQuoteResult.amount)
                         .add(feeQuoteResult.amount)
                         .toString(),
                   tokenDecimals
