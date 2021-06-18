@@ -282,10 +282,9 @@ export default defineComponent({
         const unsignedOrder: UnsignedOrder = {
           sellToken: normalizeTokenAddress(tokenInAddress.value),
           buyToken: normalizeTokenAddress(tokenOutAddress.value),
-          sellAmount: parseUnits(
-            tokenInAmount.value,
-            tokenInDecimals.value
-          ).toString(),
+          sellAmount: parseUnits(tokenInAmount.value, tokenInDecimals.value)
+            .sub(feeAmount.value)
+            .toString(),
           buyAmount: parseUnits(
             tokenOutAmount.value,
             tokenOutDecimals.value
