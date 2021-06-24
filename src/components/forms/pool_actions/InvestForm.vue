@@ -452,7 +452,7 @@ export default defineComponent({
       return minusSlippage(bptOut, props.pool.onchain.decimals);
     });
 
-    const nativeAsset = computed(() => appNetwork.nativeAsset);
+    const nativeAsset = computed(() => appNetwork.nativeAsset.symbol);
 
     const isWethPool = computed(() =>
       props.pool.tokenAddresses.includes(TOKENS.AddressMap.WETH)
