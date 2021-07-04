@@ -19,10 +19,10 @@
           color="white"
           iconSize="sm"
           :closeable="true"
-          @closed="removeToken(token)"
+          @closed="$emit('remove', token)"
         >
           <BalAsset :address="token" :size="20" class="flex-auto" />
-          <span class="ml-2">{{ tokenDictionary[token]?.symbol }}</span>
+          <span class="ml-2">{{ tokens[token]?.symbol }}</span>
         </BalChip>
       </div>
       <div
@@ -72,11 +72,12 @@ import { computed, defineComponent, PropType, ref } from 'vue';
 import SelectTokenModal from '@/components/modals/SelectTokenModal/SelectTokenModal.vue';
 import useAccountBalances from '@/composables/useAccountBalances';
 import { sortBy, take } from 'lodash';
-import useWeb3 from '@/composables/useWeb3';
 import { TOKENS } from '@/constants/tokens';
-import useTokenLists from '@/composables/useTokenLists';
 import { ETHER } from '@/constants/tokenlists';
 import { getAddress } from '@ethersproject/address';
+import useVueWeb3 from '@/services/web3/useVueWeb3';
+import { TokenMap } from '@/types';
+import useTokens from '@/composables/useTokens';
 
 export default defineComponent({
   name: 'TokenSearchInput',
@@ -85,7 +86,7 @@ export default defineComponent({
     SelectTokenModal
   },
 
-  emits: ['update:modelValue'],
+  emits: ['add', 'remove'],
 
   props: {
     modelValue: { type: Array as PropType<string[]>, default: () => [] },
@@ -94,13 +95,13 @@ export default defineComponent({
 
   setup(props, { emit }) {
     // COMPOSABLES
-    const { tokenDictionary } = useTokenLists();
+    const { tokens } = useTokens();
     const {
       isLoading: isLoadingBalances,
       balances,
       isIdle: isNotFetchingBalances
     } = useAccountBalances();
-    const { account } = useWeb3();
+    const { account } = useVueWeb3();
 
     // sorted by biggest bag balance, limited to biggest 5
     const sortedBalances = computed(() => {
@@ -118,7 +119,7 @@ export default defineComponent({
 
     const hasNoBalances = computed(() => !sortedBalances.value.length);
     const whiteListedTokens = computed(() =>
-      Object.values(tokenDictionary.value)
+      Object.values(tokens.value as TokenMap)
         .filter(token => TOKENS.Popular.Symbols.includes(token.symbol))
         .filter(balance => !props.modelValue.includes(balance.address))
     );
@@ -134,13 +135,8 @@ export default defineComponent({
       if (getAddress(token) === ETHER.address) {
         _token = TOKENS.AddressMap.WETH;
       }
-      const newSelected = [...props.modelValue, _token];
-      emit('update:modelValue', newSelected);
-    }
-
-    function removeToken(token: string) {
-      const newSelected = props.modelValue.filter(t => t !== token);
-      emit('update:modelValue', newSelected);
+      // const newSelected = [...props.modelValue, _token];
+      emit('add', _token);
     }
 
     function onClick() {
@@ -158,10 +154,9 @@ export default defineComponent({
       hasNoBalances,
       whiteListedTokens,
       // computed
-      tokenDictionary,
+      tokens,
       // methods
       addToken,
-      removeToken,
       onClick
     };
   }

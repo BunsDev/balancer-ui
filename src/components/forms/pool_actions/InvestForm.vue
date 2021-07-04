@@ -99,11 +99,11 @@
         min="0"
         step="any"
         placeholder="0"
+        :decimal-limit="tokenDecimals(i)"
         :disabled="loading"
         validate-on="input"
         prepend-border
         append-shadow
-        @update:modelValue="preventOverflow($event, i)"
       >
         <template v-slot:prepend>
           <div class="flex items-center h-full w-24">
@@ -163,10 +163,10 @@
 
     <div class="p-4">
       <BalBtn
-        v-if="!isAuthenticated"
+        v-if="!isWalletReady"
         :label="$t('connectWallet')"
         block
-        @click.prevent="connectWallet"
+        @click.prevent="toggleWalletSelectModal"
       />
       <template v-else>
         <BalCheckbox
@@ -254,19 +254,15 @@ import {
   isLessThanOrEqualTo,
   isRequired
 } from '@/lib/utils/validations';
-import { useStore } from 'vuex';
 import { useI18n } from 'vue-i18n';
 import { TransactionData } from 'bnc-notify';
 import { formatUnits } from '@ethersproject/units';
 import isEqual from 'lodash/isEqual';
 
-import useAuth from '@/composables/useAuth';
 import useTokenApprovals from '@/composables/pools/useTokenApprovals';
 import useNumbers from '@/composables/useNumbers';
 import useNotify from '@/composables/useNotify';
 import useSlippage from '@/composables/useSlippage';
-import useWeb3 from '@/composables/useWeb3';
-import useTokens from '@/composables/useTokens';
 
 import PoolExchange from '@/services/pool/exchange';
 import PoolCalculator from '@/services/pool/calculator';
@@ -276,6 +272,11 @@ import { FullPool } from '@/services/balancer/subgraph/types';
 import useFathom from '@/composables/useFathom';
 
 import { TOKENS } from '@/constants/tokens';
+import useVueWeb3 from '@/services/web3/useVueWeb3';
+import useAccountBalances from '@/composables/useAccountBalances';
+import useTokens from '@/composables/useTokens';
+import { TransactionResponse } from '@ethersproject/abstract-provider';
+import useEthers from '@/composables/useEthers';
 
 export enum FormTypes {
   proportional = 'proportional',
@@ -326,15 +327,22 @@ export default defineComponent({
     });
 
     // COMPOSABLES
-    const store = useStore();
-    const { isAuthenticated } = useAuth();
-    const { account, appNetwork, userNetwork } = useWeb3();
+    const {
+      isWalletReady,
+      account,
+      toggleWalletSelectModal,
+      getProvider,
+      appNetworkConfig,
+      userNetworkConfig
+    } = useVueWeb3();
     const { fNum, toFiat } = useNumbers();
     const { t } = useI18n();
-    const { txListener } = useNotify();
+    const { txListener, supportsBlocknative } = useNotify();
     const { minusSlippage } = useSlippage();
-    const { allTokens } = useTokens();
+    const { tokens } = useTokens();
     const { trackGoal, Goals } = useFathom();
+    const { refetchBalances } = useAccountBalances();
+    const { txListener: ethersTxListener } = useEthers();
 
     const { amounts } = toRefs(data);
 
@@ -347,14 +355,15 @@ export default defineComponent({
 
     // SERVICES
     const poolExchange = computed(
-      () => new PoolExchange(props.pool, userNetwork.value.key, allTokens.value)
+      () =>
+        new PoolExchange(
+          props.pool,
+          String(userNetworkConfig.value.chainId),
+          tokens.value
+        )
     );
 
-    const poolCalculator = new PoolCalculator(
-      props.pool,
-      allTokens.value,
-      'join'
-    );
+    const poolCalculator = new PoolCalculator(props.pool, tokens.value, 'join');
 
     // COMPUTED
     const tokenWeights = computed(() =>
@@ -374,7 +383,7 @@ export default defineComponent({
 
     const balances = computed(() => {
       return props.pool.tokenAddresses.map(
-        token => allTokens.value[token].balance
+        token => tokens.value[token].balance
       );
     });
 
@@ -452,7 +461,7 @@ export default defineComponent({
       return minusSlippage(bptOut, props.pool.onchain.decimals);
     });
 
-    const nativeAsset = computed(() => appNetwork.nativeAsset.symbol);
+    const nativeAsset = computed(() => appNetworkConfig.nativeAsset.symbol);
 
     const isWethPool = computed(() =>
       props.pool.tokenAddresses.includes(TOKENS.AddressMap.WETH)
@@ -474,14 +483,14 @@ export default defineComponent({
     ]);
 
     // METHODS
-    function tokenBalance(index) {
+    function tokenBalance(index: number): string {
       let balance =
-        allTokens.value[props.pool.tokenAddresses[index]]?.balance || 0;
+        tokens.value[props.pool.tokenAddresses[index]]?.balance || '0';
       if (data.includeUserBalance && data.userBalances[index] > 0) {
         const units = bnum(
           formatUnits(
             data.userBalances[index],
-            allTokens.value[props.pool.tokenAddresses[index]].decimals
+            tokens.value[props.pool.tokenAddresses[index]].decimals
           )
         );
         balance = bnum(balance)
@@ -494,14 +503,14 @@ export default defineComponent({
 
     async function getUserBalances() {
       data.userBalances = await poolExchange.value.getUserBalance(
+        getProvider(),
         account.value,
         props.pool.tokenAddresses
       );
-      //return allTokens.value[props.pool.tokenAddresses[index]]?.balance || 0;
     }
 
     function tokenDecimals(index) {
-      return allTokens.value[props.pool.tokenAddresses[index]].decimals;
+      return tokens.value[props.pool.tokenAddresses[index]].decimals;
     }
 
     function amountUSD(index) {
@@ -514,7 +523,7 @@ export default defineComponent({
     }
 
     function amountRules(index) {
-      return isAuthenticated.value
+      return isWalletReady.value
         ? [
             isPositive(),
             isLessThanOrEqualTo(
@@ -526,11 +535,7 @@ export default defineComponent({
     }
 
     function symbolFor(token) {
-      return allTokens.value[token]?.symbol || '';
-    }
-
-    function connectWallet() {
-      store.commit('web3/setAccountModal', true);
+      return tokens.value[token]?.symbol || '';
     }
 
     async function setPropMax() {
@@ -564,6 +569,7 @@ export default defineComponent({
     // Talk to Fernando to see if still needed
     async function calcMinBptOut(): Promise<void> {
       let { bptOut } = await poolExchange.value.queryJoin(
+        getProvider(),
         account.value,
         fullAmounts.value
       );
@@ -575,16 +581,35 @@ export default defineComponent({
       console.log('bptOut (JS)', minBptOut.value);
     }
 
-    function preventOverflow(value: number, index: number): void {
-      if (!value.toString().includes('.')) return;
+    function blocknativeTxHandler(tx: TransactionResponse): void {
+      txListener(tx.hash, {
+        onTxConfirmed: async (tx: TransactionData) => {
+          emit('success', tx);
+          data.amounts = [];
+          data.loading = false;
+          await refetchBalances.value();
+        },
+        onTxCancel: () => {
+          data.loading = false;
+        },
+        onTxFailed: () => {
+          data.loading = false;
+        }
+      });
+    }
 
-      const decimalLimit = tokenDecimals(index);
-      const [numberStr, decimalStr] = value.toString().split('.');
-
-      if (decimalStr.length > decimalLimit) {
-        const maxLength = numberStr.length + decimalLimit + 1;
-        data.amounts[index] = data.amounts[index].slice(0, maxLength);
-      }
+    function ethersTxHandler(tx: TransactionResponse): void {
+      ethersTxListener(tx, {
+        onTxConfirmed: async (tx: TransactionResponse) => {
+          emit('success', tx);
+          data.amounts = [];
+          data.loading = false;
+          await refetchBalances.value();
+        },
+        onTxFailed: () => {
+          data.loading = false;
+        }
+      });
     }
 
     async function submit(): Promise<void> {
@@ -593,32 +618,28 @@ export default defineComponent({
         data.loading = true;
         await calcMinBptOut();
         const tx = await poolExchange.value.join(
+          getProvider(),
           account.value,
           fullAmounts.value,
           minBptOut.value,
           data.includeUserBalance
         );
         console.log('Receipt', tx);
-        txListener(tx.hash, {
-          onTxConfirmed: (tx: TransactionData) => {
-            emit('success', tx);
-            data.amounts = [];
-            data.loading = false;
-          },
-          onTxCancel: () => {
-            data.loading = false;
-          },
-          onTxFailed: () => {
-            data.loading = false;
-          }
-        });
+        if (supportsBlocknative.value) {
+          blocknativeTxHandler(tx);
+        } else {
+          ethersTxHandler(tx);
+        }
       } catch (error) {
         console.error(error);
         data.loading = false;
       }
     }
 
-    watch(allTokens, newTokens => poolCalculator.setAllTokens(newTokens));
+    watch(tokens, newTokens => {
+      poolCalculator.setAllTokens(newTokens);
+      getUserBalances();
+    });
 
     watch(
       () => props.pool.onchain.tokens,
@@ -629,7 +650,6 @@ export default defineComponent({
           setPropMax();
           if (isProportional.value) setPropAmountsFor(data.range);
         }
-        getUserBalances();
       }
     );
 
@@ -658,7 +678,7 @@ export default defineComponent({
       }
     );
 
-    watch(isAuthenticated, isAuth => {
+    watch(isWalletReady, isAuth => {
       if (!isAuth) {
         data.amounts = [];
         data.propMax = [];
@@ -690,7 +710,7 @@ export default defineComponent({
       nativeAsset,
       TOKENS,
       // computed
-      allTokens,
+      tokens,
       hasValidInputs,
       hasAmounts,
       approving,
@@ -700,8 +720,8 @@ export default defineComponent({
       tokenBalance,
       amountRules,
       total,
-      isAuthenticated,
-      connectWallet,
+      isWalletReady,
+      toggleWalletSelectModal,
       formatBalance,
       isProportional,
       propPercentage,
@@ -716,9 +736,9 @@ export default defineComponent({
       submit,
       approveAllowances,
       fNum,
-      preventOverflow,
       trackGoal,
-      symbolFor
+      symbolFor,
+      tokenDecimals
     };
   }
 });

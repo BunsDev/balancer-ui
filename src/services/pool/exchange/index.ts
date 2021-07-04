@@ -1,5 +1,4 @@
 import { TransactionResponse } from '@ethersproject/abstract-provider';
-import { getInstance } from '@snapshot-labs/lock/plugins/vue3';
 import configs from '@/lib/config';
 import { callStatic, sendTransaction } from '@/lib/utils/balancer/web3';
 import { default as vaultAbi } from '@/lib/abi/Vault.json';
@@ -8,6 +7,7 @@ import { TokenMap } from '@/types';
 import JoinParams from './serializers/JoinParams';
 import ExitParams from './serializers/ExitParams';
 import { FullPool } from '@/services/balancer/subgraph/types';
+import { JsonRpcProvider, Web3Provider } from '@ethersproject/providers';
 
 export default class Exchange {
   pool: FullPool;
@@ -24,11 +24,16 @@ export default class Exchange {
     this.helpersAddress = configs[network].addresses.balancerHelpers;
   }
 
-  public async queryJoin(account: string, amountsIn: string[], bptOut = '0') {
+  public async queryJoin(
+    provider: Web3Provider | JsonRpcProvider,
+    account: string,
+    amountsIn: string[],
+    bptOut = '0'
+  ) {
     const txParams = this.joinParams.serialize(account, amountsIn, bptOut);
 
     return await callStatic(
-      this.provider,
+      provider,
       this.helpersAddress,
       helpersAbi,
       'queryJoin',
@@ -36,9 +41,13 @@ export default class Exchange {
     );
   }
 
-  public async getUserBalance(account: string, addresses: string[]) {
+  public async getUserBalance(
+    provider: Web3Provider | JsonRpcProvider,
+    account: string,
+    addresses: string[]
+  ) {
     return await callStatic(
-      this.provider,
+      provider,
       this.vaultAddress,
       vaultAbi,
       'getInternalBalance',
@@ -47,6 +56,7 @@ export default class Exchange {
   }
 
   public async join(
+    provider: Web3Provider | JsonRpcProvider,
     account: string,
     amountsIn: string[],
     bptOut = '0',
@@ -60,7 +70,7 @@ export default class Exchange {
     );
 
     return await sendTransaction(
-      this.provider,
+      provider,
       this.vaultAddress,
       vaultAbi,
       'joinPool',
@@ -69,6 +79,7 @@ export default class Exchange {
   }
 
   public async queryExit(
+    provider: Web3Provider | JsonRpcProvider,
     account: string,
     amountsOut: string[],
     bptIn: string,
@@ -84,7 +95,7 @@ export default class Exchange {
     );
 
     return await callStatic(
-      this.provider,
+      provider,
       this.helpersAddress,
       helpersAbi,
       'queryExit',
@@ -93,6 +104,7 @@ export default class Exchange {
   }
 
   public async exit(
+    provider: Web3Provider | JsonRpcProvider,
     account: string,
     amountsOut: string[],
     bptIn: string,
@@ -110,17 +122,12 @@ export default class Exchange {
     );
 
     return await sendTransaction(
-      this.provider,
+      provider,
       this.vaultAddress,
       vaultAbi,
       'exitPool',
       txParams
     );
-  }
-
-  public get provider() {
-    const { web3 } = getInstance();
-    return web3;
   }
 
   private get joinParams() {

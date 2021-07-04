@@ -18,7 +18,7 @@ export default function usePoolQuery(
 ) {
   // COMPOSABLES
   const store = useStore();
-  const { allTokens } = useTokens();
+  const { tokens: allTokens } = useTokens();
 
   // SERVICES
   const balancerSubgraph = new BalancerSubgraph();
@@ -33,6 +33,8 @@ export default function usePoolQuery(
   const isQueryEnabled = computed(() => !appLoading.value);
 
   function tokensInjected(pool: DecoratedPool): boolean {
+    if (!allTokens.value) return false;
+
     const allAddresses = Object.keys(allTokens.value);
     return [...pool.tokenAddresses, pool.address].every(address =>
       allAddresses.includes(address)
