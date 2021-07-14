@@ -10,8 +10,12 @@
         noStyle
       >
         <div v-if="notification.title" class="font-semibold flex items-center">
-          {{ notification.title }} 
-          <BalIcon name="arrow-up-right" size="sm" class="ml-1 text-gray-400 dark:text-gray-600 group-hover:text-pink-500 transition-colors"/>
+          {{ notification.title }}
+          <BalIcon
+            name="arrow-up-right"
+            size="sm"
+            class="ml-1 text-gray-400 dark:text-gray-600 group-hover:text-pink-500 transition-colors"
+          />
         </div>
         <div>{{ notification.message }}</div>
       </BalLink>

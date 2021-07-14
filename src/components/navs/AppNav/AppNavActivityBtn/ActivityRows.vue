@@ -9,9 +9,15 @@
       >
         <div class="font-semibold flex items-center">
           {{ $t(`recentActivityTypes.${transaction.action}`) }}
-          <BalIcon name="arrow-up-right" size="sm" class="ml-1 text-gray-400 dark:text-gray-600 group-hover:text-pink-500 transition-colors"/>
+          <BalIcon
+            name="arrow-up-right"
+            size="sm"
+            class="ml-1 text-gray-400 dark:text-gray-600 group-hover:text-pink-500 transition-colors"
+          />
         </div>
-        <div class="text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+        <div
+          class="text-sm text-gray-500 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors"
+        >
           {{ transaction.summary }}
         </div>
       </BalLink>
