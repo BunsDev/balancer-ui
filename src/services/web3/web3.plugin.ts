@@ -27,17 +27,25 @@ import trustwalletLogo from '@/assets/images/connectors/trustwallet.svg';
 import walletconnectLogo from '@/assets/images/connectors/walletconnect.svg';
 import walletlinkLogo from '@/assets/images/connectors/walletlink.svg';
 import i18n from '@/plugins/i18n';
+import { GnosisSafeConnector } from './connectors/gnosis/gnosis.connector';
 
-export type Wallet = 'metamask' | 'walletconnect' | 'walletlink' | 'portis';
+export type Wallet =
+  | 'metamask'
+  | 'walletconnect'
+  | 'gnosis'
+  | 'walletlink'
+  | 'portis';
 export const SupportedWallets = [
   'metamask',
   'walletconnect',
+  'gnosis',
   'walletlink',
   'portis'
 ] as Wallet[];
 export const WalletNameMap: Record<Wallet, string> = {
   metamask: 'Metamask',
   walletconnect: 'WalletConnect',
+  gnosis: 'Gnosis Safe',
   walletlink: 'Coinbase',
   portis: 'Portis'
 };
@@ -58,6 +66,7 @@ export type Web3Plugin = {
 const WalletConnectorDictionary: Record<Wallet, ConnectorImplementation> = {
   metamask: MetamaskConnector,
   walletconnect: WalletConnectConnector,
+  gnosis: GnosisSafeConnector,
   walletlink: WalletLinkConnector,
   portis: PortisConnector
 };
@@ -222,6 +231,9 @@ export function getConnectorName(connectorId: string): string {
   }
   if (connectorId === 'walletlink') {
     return `Coinbase ${i18n.global.t('wallet')}`;
+  }
+  if (connectorId === 'gnosis') {
+    return 'Gnosis Safe';
   }
   return i18n.global.t('unknown');
 }
