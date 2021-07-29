@@ -5,19 +5,33 @@ import BigNumber from 'bignumber.js';
 
 function stablePoolSpotPrice(
   amp: BigNumber, //TODO - is this the right data type?
-  scaledBalances: BigNumber[],  //TODO - is this the right data type?
-  tokenIndexA: number, 
-  tokenIndexB: number): BigNumber 
-  {
-  const invariant = SDK.StableMath._calculateInvariant(amp, scaledBalances, true);
-  const [balanceX, balanceY] = [scaledBalances[tokenIndexA], scaledBalances[tokenIndexB]];
+  scaledBalances: BigNumber[], //TODO - is this the right data type?
+  tokenIndexA: number,
+  tokenIndexB: number
+): BigNumber {
+  const invariant = SDK.StableMath._calculateInvariant(
+    amp,
+    scaledBalances,
+    true
+  );
+  const [balanceX, balanceY] = [
+    scaledBalances[tokenIndexA],
+    scaledBalances[tokenIndexB]
+  ];
 
   const a = amp.times(2);
   const b = invariant.minus(invariant.times(a));
-  const axy2 = a.times(2).times(balanceX).times(balanceY);
+  const axy2 = a
+    .times(2)
+    .times(balanceX)
+    .times(balanceY);
 
-  const derivativeX = axy2.plus(a.times(balanceY).times(balanceY)).plus(b.times(balanceY));
-  const derivativeY = axy2.plus(a.times(balanceX).times(balanceX)).plus(b.times(balanceX));
+  const derivativeX = axy2
+    .plus(a.times(balanceY).times(balanceY))
+    .plus(b.times(balanceY));
+  const derivativeY = axy2
+    .plus(a.times(balanceX).times(balanceX))
+    .plus(b.times(balanceX));
 
   return derivativeX.div(derivativeY);
 }
@@ -87,7 +101,7 @@ export function getPoolLiquidity(pool: Pool, prices: Prices) {
         const balance = parseFloat(pool.tokens[i].balance);
         const balances = []; // TODO - array of token balances
         const amp = 0; // TODO - get amp from pool.amp?
-        const spotPrice = stablePoolSpotPrice(amp, balances,  i, refTokenIndex);
+        const spotPrice = stablePoolSpotPrice(amp, balances, i, refTokenIndex);
         const value = balance * spotPrice * refTokenPrice; // TODO - requires some data type conversion?
         sumValue = sumValue + value;
         sumBalance = sumBalance + balance;
