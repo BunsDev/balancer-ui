@@ -2,18 +2,22 @@ import { Pool } from '@/services/balancer/subgraph/types';
 import { Prices } from '@/services/coingecko';
 import * as SDK from '@georgeroman/balancer-v2-pools';
 import BigNumber from 'bignumber.js';
+import { bnum, scale } from '@/lib/utils';
 
 function stablePoolSpotPrice(
-  amp: BigNumber, //TODO - is this the right data type?
-  scaledBalances: BigNumber[], //TODO - is this the right data type?
+  amp: BigNumber,
+  scaledBalances: BigNumber[],
   tokenIndexA: number,
   tokenIndexB: number
 ): BigNumber {
-  const invariant = SDK.StableMath._calculateInvariant(
-    amp,
-    scaledBalances,
-    true
-  );
+  let invariant: BigNumber;
+  try {
+    invariant = SDK.StableMath._calculateInvariant(amp, scaledBalances, true);
+  } catch (err) {
+    // There is an issue under investigation where one of the pools fails to converge when calculating invariant and this catches that case
+    // console.error(`!!!!!!! EVM ISSUE`);
+    return bnum(1);
+  }
   const [balanceX, balanceY] = [
     scaledBalances[tokenIndexA],
     scaledBalances[tokenIndexB]
@@ -65,28 +69,40 @@ export function getPoolLiquidity(pool: Pool, prices: Prices) {
       return '0';
     }
   }
-  // TODO [improvement]: if price is missing, compute spot price based on balances and amp factor
-  if (pool.poolType == 'Stable' || pool.poolType == 'MetaStable') {
+
+  // Solidity maths uses precison method for amp that must be replicated
+  const AMP_PRECISION = bnum(1000);
+  const poolType: string = pool.poolType;
+
+  if (poolType === 'Stable' || poolType === 'MetaStable') {
     let sumBalance = 0;
     let sumValue = 0;
     let refTokenIndex = 0;
     let refTokenPrice = 0;
+    const balances: BigNumber[] = [];
+    const balancesScaled: BigNumber[] = [];
 
     for (let i = 0; i < pool.tokens.length; i++) {
       const token = pool.tokens[i];
+      let balance: BigNumber;
+      if (poolType === 'Stable') balance = bnum(token.balance);
+      else balance = bnum(token.balance).times(bnum(token.priceRate));
+
+      balances.push(balance);
+      // Stable maths must use 1e18 fixed point
+      balancesScaled.push(scale(balance, 18));
       // if a token's price is unkown, ignore it
       // it will be computed at the next step
       if (!prices[token.address]) {
         continue;
       }
       const price = prices[token.address].price;
-      const balance = parseFloat(pool.tokens[i].balance);
       refTokenIndex = i;
       refTokenPrice = price;
 
-      const value = balance * price;
+      const value = balance.toNumber() * price;
       sumValue = sumValue + value;
-      sumBalance = sumBalance + balance;
+      sumBalance = sumBalance + balance.toNumber();
     }
     // if at least the partial value of the pool is known
     // then compute the rest of the value
@@ -98,18 +114,30 @@ export function getPoolLiquidity(pool: Pool, prices: Prices) {
         if (prices[token.address]) {
           continue;
         }
-        const balance = parseFloat(pool.tokens[i].balance);
-        const balances = []; // TODO - array of token balances
-        const amp = 0; // TODO - get amp from pool.amp?
-        const spotPrice = stablePoolSpotPrice(amp, balances, i, refTokenIndex);
-        const value = balance * spotPrice * refTokenPrice; // TODO - requires some data type conversion?
+
+        const amp = bnum(pool.amp);
+        // Solidity maths uses precison method for amp that must be replicated
+        const ampAdjusted = amp.times(AMP_PRECISION);
+        const spotPrice = stablePoolSpotPrice(
+          ampAdjusted,
+          balancesScaled,
+          i,
+          refTokenIndex
+        );
+        // TO DO - For Debug, Remove
+        console.log(`!!!!!!! SP (${pool.poolType}): ${spotPrice.toString()}`);
+        const value =
+          balances[i].toNumber() * spotPrice.toNumber() * refTokenPrice; // TODO - requires some data type conversion?
         sumValue = sumValue + value;
-        sumBalance = sumBalance + balance;
+        sumBalance = sumBalance + balances[i].toNumber();
       }
+      // TO DO - For Debug, Remove
+      console.log(`!!!!!!! RESULT: ${sumValue.toString()}`);
       return sumValue.toString();
     } else {
       return '0';
     }
   }
+
   return '0';
 }

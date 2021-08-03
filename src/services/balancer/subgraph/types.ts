@@ -12,6 +12,7 @@ export interface PoolToken {
   address: string;
   balance: string;
   weight: string;
+  priceRate: string;
 }
 
 export interface Pool {
@@ -29,6 +30,7 @@ export interface Pool {
   totalSwapFee: string;
   totalSwapVolume: string;
   hasLiquidityMiningRewards: boolean;
+  amp: string;
 }
 
 export interface DecoratedPool extends Pool {
