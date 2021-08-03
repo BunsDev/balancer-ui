@@ -11,6 +11,7 @@ import {
 } from '@ethersproject/providers';
 import { WalletLinkConnector } from './connectors/walletlink/walletlink.connector';
 import { PortisConnector } from './connectors/portis/portis.connector';
+import { GnosisSafeConnector } from './connectors/gnosis/gnosis.connector';
 import useFathom from '@/composables/useFathom';
 import getProvider from '@/lib/utils/provider';
 import { configService } from '../config/config.service';
@@ -27,7 +28,6 @@ import trustwalletLogo from '@/assets/images/connectors/trustwallet.svg';
 import walletconnectLogo from '@/assets/images/connectors/walletconnect.svg';
 import walletlinkLogo from '@/assets/images/connectors/walletlink.svg';
 import i18n from '@/plugins/i18n';
-import { GnosisSafeConnector } from './connectors/gnosis/gnosis.connector';
 
 export type Wallet =
   | 'metamask'
