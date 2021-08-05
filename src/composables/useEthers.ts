@@ -53,6 +53,7 @@ export default function useEthers() {
 
     try {
       const receipt = await waitForTxConfirmation(tx);
+      //
       // attempt to finalize transaction so that the pending tx watcher won't check the tx again.
       if (receipt != null) {
         const safeTx = await new SafeAppsSDK().txs.getBySafeTxHash(tx.hash);
