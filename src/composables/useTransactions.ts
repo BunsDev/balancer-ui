@@ -396,6 +396,7 @@ export default function useTransactions() {
     finalizeTransaction,
     getExplorerLink,
     isSuccessfulTransaction,
+    updateTransaction,
 
     // computed
     pendingTransactions,

@@ -7,6 +7,7 @@ import {
 import useAccountBalances from './useAccountBalances';
 import useBlocknative from './useBlocknative';
 import useTransactions from './useTransactions';
+import SafeAppsSDK from '@gnosis.pm/safe-apps-sdk';
 
 type TxCallback = (
   txData: TransactionResponse,
@@ -36,7 +37,7 @@ const waitForTxConfirmation = async (
 };
 
 export default function useEthers() {
-  const { finalizeTransaction } = useTransactions();
+  const { finalizeTransaction, updateTransaction } = useTransactions();
   const { refetchBalances } = useAccountBalances();
   const { supportsBlocknative } = useBlocknative();
 
@@ -54,6 +55,13 @@ export default function useEthers() {
       const receipt = await waitForTxConfirmation(tx);
       // attempt to finalize transaction so that the pending tx watcher won't check the tx again.
       if (receipt != null) {
+        const safeTx = await new SafeAppsSDK().txs.getBySafeTxHash(tx.hash);
+        console.log(safeTx);
+        if (safeTx.txHash != null) {
+          updateTransaction(tx.hash, 'tx', {
+            id: safeTx.txHash
+          });
+        }
         finalizeTransaction(tx.hash, 'tx', receipt);
       }
       callbacks.onTxConfirmed(tx);
