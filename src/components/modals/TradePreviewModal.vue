@@ -23,48 +23,74 @@
       </div>
       <div>
         <div class="mt-6 mb-3 text-sm">
-          Requires {{ requiresApproval ? 2 : 1 }}
+          Requires {{ approvalTxCount }}
           {{ requiresApproval ? 'transactions' : 'transaction' }}:
         </div>
         <div>
-          <div
-            v-if="requiresApproval"
-            class="p-3 flex items-center border rounded-lg"
-          >
-            <div
-              class="w-9 h-9 flex items-center justify-center border rounded-full text-green-500"
-            >
-              <BalIcon v-if="isApproved" name="check" class="text-green-500" />
+          <div v-if="requiresBatchRelayerApproval" class="mb-3 card-container">
+            <div class="card-step text-green-500">
+              <BalIcon
+                v-if="isBatchRelayerApproved"
+                name="check"
+                class="text-green-500"
+              />
               <span v-else class="text-gray-500 dark:text-gray-400">1</span>
             </div>
             <div class="ml-3">
-              <span v-if="isApproved">{{ $t('approved') }}</span>
-              <span v-else>{{ $t('approve') }}</span>
+              <span v-if="isBatchRelayerApproved">{{
+                $t('approvedBatchRelayer')
+              }}</span>
+              <span v-else>{{ $t('approveBatchRelayer') }}</span>
             </div>
           </div>
-          <div
-            class="mt-3 p-3 flex items-center border rounded-lg dark:border-gray-800"
-          >
-            <div
-              class="w-9 h-9 flex items-center justify-center border rounded-full dark:border-gray-700 text-gray-500 dark:text-gray-400"
-            >
-              {{ requiresApproval ? 2 : 1 }}
+          <div v-if="requiresTokenApproval" class="card-container">
+            <div class="card-step text-green-500">
+              <BalIcon
+                v-if="isTokenApproved"
+                name="check"
+                class="text-green-500"
+              />
+              <span v-else class="text-gray-500 dark:text-gray-400">{{
+                requiresBatchRelayerApproval ? 2 : 1
+              }}</span>
             </div>
             <div class="ml-3">
-              Trade {{ fNum(valueIn, 'usd') }} {{ symbolIn }} -> {{ symbolOut }}
+              <span v-if="isTokenApproved"
+                >{{ $t('approved') }} {{ symbolIn }}</span
+              >
+              <span v-else>{{ $t('approve') }} {{ symbolIn }}</span>
+            </div>
+          </div>
+          <div class="mt-3 card-container">
+            <div class="card-step text-gray-500 dark:text-gray-400">
+              {{ approvalTxCount }}
+            </div>
+            <div class="ml-3">
+              {{ $t('trade') }} {{ fNum(valueIn, 'usd') }} {{ symbolIn }} ->
+              {{ symbolOut }}
             </div>
           </div>
         </div>
       </div>
       <BalBtn
-        v-if="requiresApproval && !isApproved"
+        v-if="requiresBatchRelayerApproval && !isApproved"
+        class="mt-5"
+        :label="$t('approveBatchRelayer')"
+        :loading="approvingBatchRelayer"
+        :loading-label="`${$t('approveBatchRelayer')}…`"
+        color="gradient"
+        block
+        @click.prevent="approveBatchRelayer"
+      />
+      <BalBtn
+        v-else-if="requiresTokenApproval && !isTokenApproved"
         class="mt-5"
         :label="`${$t('approve')} ${symbolIn}`"
-        :loading="approving"
+        :loading="approvingToken"
         :loading-label="`${$t('approving')} ${symbolIn}…`"
         color="gradient"
         block
-        @click.prevent="approve"
+        @click.prevent="approveToken"
       />
       <BalBtn
         v-else
@@ -84,9 +110,14 @@
 import { defineComponent, toRefs, computed } from 'vue';
 import useNumbers from '@/composables/useNumbers';
 import useTokenApproval from '@/composables/trade/useTokenApproval';
-import useWeb3 from '@/services/web3/useWeb3';
+import useBatchRelayerApproval from '@/composables/trade/useBatchRelayerApproval';
 import useTokens from '@/composables/useTokens';
+
+import useWeb3 from '@/services/web3/useWeb3';
+
 import { NATIVE_ASSET_ADDRESS } from '@/constants/tokens';
+import { configService } from '@/services/config/config.service';
+import { getAddress } from '@ethersproject/address';
 
 export default defineComponent({
   emits: ['trade', 'close'],
@@ -144,12 +175,19 @@ export default defineComponent({
       );
     });
 
-    const {
-      approving,
-      approveV1,
-      approveV2,
-      allowanceState
-    } = useTokenApproval(addressIn, amountIn, tokens);
+    const isStETHTrade = computed(
+      () =>
+        [addressIn.value, addressOut.value].includes(
+          getAddress(configService.network.addresses.stETH)
+        ) || true
+    );
+
+    const tokenApproval = useTokenApproval(addressIn, amountIn, tokens);
+
+    const batchRelayerApproval = useBatchRelayerApproval(
+      isStETHTrade.value,
+      amountIn
+    );
 
     const valueIn = computed(() => toFiat(amountIn.value, addressIn.value));
 
@@ -171,24 +209,60 @@ export default defineComponent({
 
     const isEthTrade = computed(() => addressIn.value === NATIVE_ASSET_ADDRESS);
 
-    const requiresApproval = computed(() => {
-      if (isWrap.value || isUnwrap.value || isEthTrade.value) return false;
-      return true;
-    });
+    const requiresTokenApproval = computed(() =>
+      isWrap.value || isUnwrap.value || isEthTrade.value ? false : true
+    );
 
-    const isApproved = computed(() => {
-      return isV1Swap.value
-        ? allowanceState.value.isUnlockedV1
-        : allowanceState.value.isUnlockedV2;
-    });
+    const requiresBatchRelayerApproval = computed(
+      () =>
+        (requiresTokenApproval.value &&
+          isStETHTrade.value &&
+          !batchRelayerApproval.isUnlocked) ||
+        true
+    );
 
-    async function approve(): Promise<void> {
+    const requiresApproval = computed(
+      () => requiresTokenApproval.value || requiresBatchRelayerApproval.value
+    );
+
+    const isTokenApproved = computed(() =>
+      isV1Swap.value
+        ? tokenApproval.allowanceState.value.isUnlockedV1
+        : tokenApproval.allowanceState.value.isUnlockedV2
+    );
+
+    const isBatchRelayerApproved = computed(
+      () => batchRelayerApproval.isUnlocked.value
+    );
+
+    const isApproved = computed(
+      () => isTokenApproved.value || isBatchRelayerApproved.value
+    );
+
+    async function approveBatchRelayer(): Promise<void> {
+      await batchRelayerApproval.approve();
+    }
+
+    async function approveToken(): Promise<void> {
       if (isV1Swap.value) {
-        await approveV1();
+        await tokenApproval.approveV1();
       } else {
-        await approveV2();
+        await tokenApproval.approveV2();
       }
     }
+
+    const approvingToken = computed(() => tokenApproval.approving.value);
+
+    const approvingBatchRelayer = computed(
+      () => batchRelayerApproval.approving.value
+    );
+
+    const approvalTxCount = computed(() => {
+      if (requiresTokenApproval.value) {
+        return requiresBatchRelayerApproval.value ? 3 : 2;
+      }
+      return 1;
+    });
 
     function trade() {
       emit('trade');
@@ -199,17 +273,35 @@ export default defineComponent({
     }
 
     return {
+      // methods
       fNum,
+      onClose,
+      approveBatchRelayer,
+      approveToken,
+      trade,
+      // computed
       requiresApproval,
+      requiresTokenApproval,
+      requiresBatchRelayerApproval,
+      isTokenApproved,
+      isBatchRelayerApproved,
       isApproved,
       valueIn,
       symbolIn,
       symbolOut,
-      onClose,
-      approve,
-      approving,
-      trade
+      approvingBatchRelayer,
+      approvingToken,
+      batchRelayerApproval,
+      approvalTxCount
     };
   }
 });
 </script>
+<style scoped>
+.card-container {
+  @apply p-3 flex items-center border rounded-lg dark:border-gray-800;
+}
+.card-step {
+  @apply w-9 h-9 flex items-center justify-center border rounded-full dark:border-gray-700;
+}
+</style>

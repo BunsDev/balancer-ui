@@ -60,7 +60,11 @@ export interface TokensProviderResponse {
   injectTokens: Function;
   searchTokens: Function;
   hasBalance: Function;
-  approvalsRequired: Function;
+  approvalsRequired: (
+    tokenAddresses: string[],
+    amounts: string[],
+    contractAddress?: string
+  ) => string[];
   priceFor: Function;
   balanceFor: (address: string) => string;
   getTokens: Function;
@@ -288,7 +292,8 @@ export default {
     ): string[] {
       return tokenAddresses.filter((address, index) => {
         const amount = Number(amounts[index]);
-        const allowance = bnum(allowances.value[contractAddress][address]);
+        const contractAllowance = allowances.value[contractAddress];
+        const allowance = bnum(contractAllowance[address]);
 
         if (amount === 0) return false;
 
