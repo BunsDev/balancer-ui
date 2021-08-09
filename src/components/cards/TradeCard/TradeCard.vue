@@ -99,7 +99,6 @@ import useValidation, {
   TradeValidation
 } from '@/composables/trade/useValidation';
 import useSor from '@/composables/trade/useSor';
-import { ETHER } from '@/constants/tokenlists';
 
 import SuccessOverlay from '@/components/cards/SuccessOverlay.vue';
 import TradePair from '@/components/cards/TradeCard/TradePair.vue';
@@ -114,6 +113,9 @@ import useWeb3 from '@/services/web3/useWeb3';
 import useBreakpoints from '@/composables/useBreakpoints';
 import useTokens from '@/composables/useTokens';
 import useDarkMode from '@/composables/useDarkMode';
+import { configService } from '@/services/config/config.service';
+
+const { nativeAsset } = configService.network;
 
 export default defineComponent({
   components: {
@@ -146,6 +148,10 @@ export default defineComponent({
     const txHash = ref('');
     const modalTradePreviewIsOpen = ref(false);
 
+    const slippageBufferRate = computed(() =>
+      parseFloat(store.state.app.slippage)
+    );
+
     const tokenIn = computed(() => tokens.value[tokenInAddress.value]);
 
     const tokenOut = computed(() => tokens.value[tokenOutAddress.value]);
@@ -166,7 +172,7 @@ export default defineComponent({
     const isWrap = computed(() => {
       const config = userNetworkConfig.value;
       return (
-        tokenInAddress.value === ETHER.address &&
+        tokenInAddress.value === nativeAsset.address &&
         tokenOutAddress.value === config.addresses.weth
       );
     });
@@ -174,7 +180,7 @@ export default defineComponent({
     const isUnwrap = computed(() => {
       const config = userNetworkConfig.value;
       return (
-        tokenOutAddress.value === ETHER.address &&
+        tokenOutAddress.value === nativeAsset.address &&
         tokenInAddress.value === config.addresses.weth
       );
     });
@@ -216,14 +222,14 @@ export default defineComponent({
       isWrap,
       isUnwrap,
       tokenIn,
-      tokenOut
+      tokenOut,
+      slippageBufferRate
     });
     const { errorMessage } = useValidation(
       tokenInAddress,
       tokenInAmount,
       tokenOutAddress,
-      tokenOutAmount,
-      tokens
+      tokenOutAmount
     );
 
     const title = computed(() => {
@@ -241,10 +247,13 @@ export default defineComponent({
         };
       }
       switch (errorMessage.value) {
-        case TradeValidation.NO_ETHER:
+        case TradeValidation.NO_NATIVE_ASSET:
           return {
-            header: t('noEth'),
-            body: t('noEthDetailed')
+            header: t('noNativeAsset', [nativeAsset.symbol]),
+            body: t('noNativeAssetDetailed', [
+              nativeAsset.symbol,
+              configService.network.chainName
+            ])
           };
         case TradeValidation.NO_BALANCE:
           return {
@@ -269,10 +278,10 @@ export default defineComponent({
 
     async function populateInitialTokens(): Promise<void> {
       let assetIn = router.currentRoute.value.params.assetIn as string;
-      if (assetIn === ETHER.deeplinkId) assetIn = ETHER.address;
+      if (assetIn === nativeAsset.deeplinkId) assetIn = nativeAsset.address;
       else if (isAddress(assetIn)) assetIn = getAddress(assetIn);
       let assetOut = router.currentRoute.value.params.assetOut as string;
-      if (assetOut === ETHER.deeplinkId) assetOut = ETHER.address;
+      if (assetOut === nativeAsset.deeplinkId) assetOut = nativeAsset.address;
       else if (isAddress(assetOut)) assetOut = getAddress(assetOut);
 
       tokenInAddress.value = assetIn || store.state.trade.inputAsset;

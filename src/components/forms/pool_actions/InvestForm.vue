@@ -75,10 +75,7 @@
               <span class="break-words" :title="fNum(amountUSD(i), 'usd')">
                 {{ amountUSD(i) === 0 ? '-' : fNum(amountUSD(i), 'usd') }}
               </span>
-              <span
-                v-if="pool.poolType !== 'Stable'"
-                class="text-xs text-gray-400"
-              >
+              <span v-if="!isStablePool" class="text-xs text-gray-400">
                 {{ fNum(tokenWeights[i], 'percent_lg') }}
               </span>
             </div>
@@ -119,7 +116,7 @@
                 {{ pool.onchain.tokens[token].symbol }}
               </span>
               <span
-                v-if="pool.poolType !== 'Stable'"
+                v-if="!isStablePool"
                 class="leading-none text-xs mt-1 text-gray-500"
               >
                 {{ fNum(tokenWeights[i], 'percent_lg') }}
@@ -256,7 +253,8 @@ import {
   reactive,
   toRefs,
   ref,
-  PropType
+  PropType,
+  toRef
 } from 'vue';
 import { FormRef } from '@/types';
 import {
@@ -274,6 +272,7 @@ import useSlippage from '@/composables/useSlippage';
 
 import PoolExchange from '@/services/pool/exchange';
 import PoolCalculator from '@/services/pool/calculator/calculator.sevice';
+import { getPoolWeights } from '@/services/pool/pool.helper';
 import { bnum } from '@/lib/utils';
 import FormTypeToggle from './shared/FormTypeToggle.vue';
 import { FullPool } from '@/services/balancer/subgraph/types';
@@ -285,6 +284,7 @@ import useTokens from '@/composables/useTokens';
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import useEthers from '@/composables/useEthers';
 import useTransactions from '@/composables/useTransactions';
+import { usePool } from '@/composables/usePool';
 
 export enum FormTypes {
   proportional = 'proportional',
@@ -346,10 +346,11 @@ export default defineComponent({
     const { fNum, toFiat } = useNumbers();
     const { t } = useI18n();
     const { minusSlippage } = useSlippage();
-    const { tokens } = useTokens();
+    const { tokens, balances: allBalances } = useTokens();
     const { trackGoal, Goals } = useFathom();
     const { txListener } = useEthers();
     const { addTransaction } = useTransactions();
+    const { isStablePool, isWethPool } = usePool(toRef(props, 'pool'));
 
     const { amounts } = toRefs(data);
 
@@ -370,7 +371,12 @@ export default defineComponent({
         )
     );
 
-    const poolCalculator = new PoolCalculator(props.pool, tokens.value, 'join');
+    const poolCalculator = new PoolCalculator(
+      props.pool,
+      tokens.value,
+      allBalances,
+      'join'
+    );
 
     // COMPUTED
     const tokenWeights = computed(() =>
@@ -390,7 +396,7 @@ export default defineComponent({
 
     const balances = computed(() => {
       return props.pool.tokenAddresses.map(
-        token => tokens.value[token].balance
+        token => allBalances.value[token] || '0'
       );
     });
 
@@ -471,10 +477,6 @@ export default defineComponent({
 
     const nativeAsset = computed(() => appNetworkConfig.nativeAsset.symbol);
 
-    const isWethPool = computed(() =>
-      props.pool.tokenAddresses.includes(TOKENS.AddressMap.WETH)
-    );
-
     const formTypes = ref([
       {
         label: t('noPriceImpact'),
@@ -492,8 +494,8 @@ export default defineComponent({
 
     // METHODS
     function tokenBalance(index: number): string {
-      let balance =
-        tokens.value[props.pool.tokenAddresses[index]]?.balance || '0';
+      let balance = balances.value[index] || '0';
+
       if (data.includeUserBalance && data.userBalances[index] > 0) {
         const units = bnum(
           formatUnits(
@@ -608,7 +610,10 @@ export default defineComponent({
           id: tx.hash,
           type: 'tx',
           action: 'invest',
-          summary: `${total.value} to pool`,
+          summary: t('transactionSummary.investInPool', [
+            total.value,
+            getPoolWeights(props.pool)
+          ]),
           details: {
             total,
             pool: props.pool
@@ -620,6 +625,8 @@ export default defineComponent({
             emit('success', tx);
             data.amounts = [];
             data.loading = false;
+            setPropMax();
+            resetSlider();
           },
           onTxFailed: () => {
             data.loading = false;
@@ -727,6 +734,7 @@ export default defineComponent({
       isRequired,
       hasZeroBalance,
       isWethPool,
+      isStablePool,
       // methods
       submit,
       approveAllowances,
