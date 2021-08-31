@@ -84,10 +84,10 @@ export class PriceService {
           addressesPerRequest * page,
           addressesPerRequest * (page + 1)
         );
-        const endpoint = `/simple/token_price/${this.platformId}?contract_addresses=${addressString}&vs_currencies=${this.fiatParam}`;
+        const endpoint = `/simplex/token_price/${this.platformId}?contract_addresses=${addressString}&vs_currencies=${this.fiatParam}`;
         const request = retryPromiseWithDelay(
           this.client.get<PriceResponse>(endpoint),
-          3,
+          1,
           2000
         );
         requests.push(request);

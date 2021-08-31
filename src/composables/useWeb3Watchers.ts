@@ -3,6 +3,7 @@ import { EthereumTransactionData } from 'bnc-sdk/dist/types/src/interfaces';
 import { watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useStore } from 'vuex';
+import useAlerts, { AlertPriority, AlertType } from './useAlerts';
 
 import useBlocknative from './useBlocknative';
 import useTokens from './useTokens';
@@ -10,7 +11,6 @@ import useTransactions, { ReplacementReason } from './useTransactions';
 
 export default function useWeb3Watchers() {
   // COMPOSABLES
-  const store = useStore();
   const { t } = useI18n();
   const { blocknative, supportsBlocknative } = useBlocknative();
   const {
@@ -22,7 +22,13 @@ export default function useWeb3Watchers() {
     blockNumber,
     connectToAppNetwork
   } = useWeb3();
-  const { refetchBalances, refetchAllowances } = useTokens();
+  const { addAlert, removeAlert } = useAlerts();
+  const {
+    refetchBalances,
+    refetchAllowances,
+    priceQueryError,
+    refetchPrices
+  } = useTokens();
   const { handlePendingTransactions, updateTransaction } = useTransactions();
 
   function handleTransactionReplacement(
@@ -77,19 +83,37 @@ export default function useWeb3Watchers() {
   // -> Display alert message if unsupported or not the same as app network.
   watch(chainId, () => {
     if (isUnsupportedNetwork.value || isMismatchedNetwork.value) {
-      store.commit('alerts/setCurrent', {
+      addAlert({
+        id: 'network-mismatch',
         label: t('networkMismatch', [appNetworkConfig.name]),
-        type: 'error',
-        persistant: true,
+        type: AlertType.ERROR,
+        persistent: true,
         action: connectToAppNetwork,
-        actionLabel: t('switchNetwork')
+        actionLabel: t('switchNetwork'),
+        priority: AlertPriority.HIGH
       });
     } else {
-      store.commit('alerts/setCurrent', null);
+      removeAlert('network-mismatch');
     }
   });
 
   watch(blockNumber, async () => {
     handlePendingTransactions();
+  });
+
+  watch(priceQueryError, () => {
+    if (priceQueryError.value) {
+      addAlert({
+        id: 'price-error',
+        label: 'coingecko error',
+        type: AlertType.ERROR,
+        persistent: true,
+        action: refetchPrices.value,
+        actionLabel: 'retry',
+        priority: AlertPriority.MEDIUM
+      });
+    } else {
+      removeAlert('price-error');
+    }
   });
 }
