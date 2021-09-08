@@ -248,13 +248,13 @@
             name="highPiAccepted"
             class="text-gray-500 mb-12"
             size="sm"
-            :label="$t('priceImpactAccept')"
+            :label="$t('priceImpactAccept', [$t('depositing')])"
           />
           <BalBtn
             type="submit"
             :loading-label="$t('confirming')"
             color="gradient"
-            :disabled="!hasAmounts || !hasValidInputs"
+            :disabled="!hasAmounts || !hasValidInputs || isMismatchedNetwork"
             :loading="loading"
             block
             @click="trackGoal(Goals.ClickInvest)"
@@ -361,6 +361,7 @@ export default defineComponent({
     // COMPOSABLES
     const {
       isWalletReady,
+      isMismatchedNetwork,
       account,
       toggleWalletSelectModal,
       getProvider,
@@ -744,6 +745,7 @@ export default defineComponent({
       amountRules,
       total,
       isWalletReady,
+      isMismatchedNetwork,
       toggleWalletSelectModal,
       formatBalance,
       isProportional,

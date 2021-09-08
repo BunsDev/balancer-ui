@@ -123,7 +123,7 @@
         @update:modelValue="setTradeLiquidity"
       />
     </div>
-    <div v-if="!isPolygon" class="px-4 mt-6">
+    <div v-if="isEIP1559SupportedNetwork" class="px-4 pb-4 mt-6">
       <div class="flex items-baseline">
         <span v-text="$t('transactionType')" class="font-medium mb-2" />
         <BalTooltip>
@@ -139,8 +139,7 @@
         @update:modelValue="setEthereumTxType"
       />
     </div>
-    <!-- Hide Gnosis interface switch for now -->
-    <div v-if="!isPolygon && APP_ENV === 'staging'" class="px-4 mt-6">
+    <div v-if="isGnosisSupportedNetwork" class="px-4 mt-6">
       <div class="flex items-baseline">
         <span v-text="$t('tradeInterface')" class="font-medium mb-2" />
         <BalTooltip>
@@ -158,7 +157,8 @@
       <div class="flex mt-1"></div>
     </div>
     <div
-      class="network mt-4 p-4 text-sm border-t dark:border-gray-900 rounded-b-xl"
+      v-if="networkName"
+      class="network p-4 text-sm border-t dark:border-gray-900 rounded-b-xl"
     >
       <div v-text="$t('network')" />
       <div class="flex items-baseline">
@@ -178,6 +178,7 @@ import {
   getConnectorName,
   getConnectorLogo
 } from '@/services/web3/web3.plugin';
+import { GP_SUPPORTED_NETWORKS } from '@/services/gnosis/constants';
 import AppSlippageForm from '@/components/forms/AppSlippageForm.vue';
 import Avatar from '@/components/images/Avatar.vue';
 import useWeb3 from '@/services/web3/useWeb3';
@@ -190,7 +191,6 @@ import {
 } from '@/constants/options';
 import { TradeInterface } from '@/store/modules/app';
 import useEthereumTxType from '@/composables/useEthereumTxType';
-import useConfig from '@/composables/useConfig';
 
 const locales = {
   'en-US': 'English',
@@ -218,18 +218,15 @@ export default defineComponent({
     const store = useStore();
     const {
       explorerLinks,
-      isPolygon,
       account,
-      chainId,
       disconnectWallet,
       connector,
       isV1Supported,
-      userNetworkConfig
+      isEIP1559SupportedNetwork,
+      userNetworkConfig,
+      appNetworkConfig
     } = useWeb3();
     const { ethereumTxType, setEthereumTxType } = useEthereumTxType();
-    const {
-      env: { APP_ENV }
-    } = useConfig();
 
     // DATA
     const data = reactive({
@@ -240,10 +237,21 @@ export default defineComponent({
     });
 
     // COMPUTED
-    const networkColorClass = computed(
-      () => `network-${userNetworkConfig.value.shortName}`
-    );
-    const networkName = computed(() => userNetworkConfig.value.name);
+    const networkColorClass = computed(() => {
+      switch (userNetworkConfig.value?.shortName) {
+        case 'Kovan':
+          return 'bg-purple-500';
+        case 'Ropsten':
+          return 'bg-pink-500';
+        case 'Rinkeby':
+          return 'bg-yellow-500';
+        case 'Goerli':
+          return 'bg-blue-500';
+        default:
+          return 'bg-green-500';
+      }
+    });
+    const networkName = computed(() => userNetworkConfig.value?.name);
     const appLocale = computed(() => store.state.app.locale);
     const appDarkMode = computed(() => store.state.app.darkMode);
     const appTradeLiquidity = computed(() => store.state.app.tradeLiquidity);
@@ -253,6 +261,9 @@ export default defineComponent({
 
     const connectorLogo = computed(() => getConnectorLogo(connector.value?.id));
     const hideDisconnect = computed(() => connector.value?.id == 'gnosis');
+    const isGnosisSupportedNetwork = computed(() =>
+      GP_SUPPORTED_NETWORKS.includes(appNetworkConfig.chainId)
+    );
 
     // METHODS
     const setDarkMode = val => store.commit('app/setDarkMode', val);
@@ -277,12 +288,10 @@ export default defineComponent({
       ...toRefs(data),
       // constants
       APP,
-      APP_ENV,
       TradeInterface,
       // computed
       account,
       appTradeLiquidity,
-      chainId,
       appTradeInterface,
       networkName,
       networkColorClass,
@@ -292,7 +301,8 @@ export default defineComponent({
       connectorLogo,
       hideLiquidity,
       hideDisconnect,
-      isPolygon,
+      isEIP1559SupportedNetwork,
+      isGnosisSupportedNetwork,
       // methods
       disconnectWallet,
       setDarkMode,
@@ -329,21 +339,5 @@ export default defineComponent({
 
 .slippage-input.active {
   @apply text-blue-500 border-blue-500;
-}
-
-.network-kovan {
-  background: #9064ff;
-}
-
-.network-ropsten {
-  background: #ff4a8d;
-}
-
-.network-rinkeby {
-  background: #f6c343;
-}
-
-.network-goerli {
-  background: #3099f2;
 }
 </style>

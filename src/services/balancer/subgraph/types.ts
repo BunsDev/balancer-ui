@@ -16,7 +16,7 @@ export interface PoolToken {
   address: string;
   balance: string;
   weight: string;
-  priceRate?: string;
+  priceRate: string | null;
 }
 
 export interface Pool {
@@ -42,7 +42,9 @@ export interface DecoratedPool extends Pool {
     volume: string;
     apr: {
       pool: string;
+      thirdParty: string;
       liquidityMining: string;
+      liquidityMiningBreakdown: { [address: string]: string };
       total: string;
     };
     fees: string;

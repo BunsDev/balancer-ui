@@ -2,19 +2,26 @@
   <div :class="['app-nav-alert', classes]">
     <div class="w-8" />
     <div class="flex-1 text-center flex items-center justify-center">
-      <BalIcon :name="iconName" class="mr-4" />
+      <BalIcon :name="iconName" size="lg" class="mr-4" />
       <span>{{ alert.label }}</span>
+      <BalBtn
+        v-if="alert.action && alert.actionLabel"
+        class="ml-4 cursor-pointer"
+        color="white"
+        size="xs"
+        :label="alert.actionLabel"
+        @click="alert.action"
+      />
     </div>
-    <div v-if="!alert.persistant" class="w-8">
+    <div v-if="!alert.persistent" class="w-8">
       <BalIcon name="x" class="cursor-pointer" @click="handleClose" />
     </div>
   </div>
 </template>
 
 <script lang="ts">
+import useAlerts, { Alert, AlertType } from '@/composables/useAlerts';
 import { computed, defineComponent, PropType } from 'vue';
-import { Alert } from '@/store/modules/alerts';
-import { useStore } from 'vuex';
 
 export default defineComponent({
   name: 'NavAlert',
@@ -24,11 +31,11 @@ export default defineComponent({
   },
 
   setup(props) {
-    const store = useStore();
+    const { removeAlert } = useAlerts();
 
     const colorClass = computed(() => {
       switch (props.alert.type) {
-        case 'error':
+        case AlertType.ERROR:
           return 'bg-red-500 text-white';
         default:
           return 'bg-black text-white';
@@ -37,7 +44,7 @@ export default defineComponent({
 
     const iconName = computed(() => {
       switch (props.alert.type) {
-        case 'error':
+        case AlertType.ERROR:
           return 'alert-triangle';
         default:
           return 'info';
@@ -51,7 +58,7 @@ export default defineComponent({
     });
 
     function handleClose() {
-      store.commit('alerts/setCurrent', null);
+      removeAlert(props.alert.id);
     }
 
     return { classes, iconName, handleClose };

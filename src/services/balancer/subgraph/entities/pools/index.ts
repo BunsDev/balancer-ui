@@ -12,13 +12,16 @@ import {
 import { getAddress } from '@ethersproject/address';
 import {
   currentLiquidityMiningRewards,
-  computeTotalAPRForPool
+  computeTotalAPRForPool,
+  computeAPRsForPool
 } from '@/lib/utils/liquidityMining';
 import { NetworkId } from '@/constants/network';
 import { configService as _configService } from '@/services/config/config.service';
 import { TokenPrices } from '@/services/coingecko/api/price.service';
 import { FiatCurrency } from '@/constants/currency';
-import { isStable } from '@/composables/usePool';
+import { isStable, isWstETH } from '@/composables/usePool';
+import { twentyFourHoursInSecs } from '@/composables/useTime';
+import { lidoService } from '@/services/lido/lido.service';
 
 const IS_LIQUIDITY_MINING_ENABLED = true;
 
@@ -59,14 +62,14 @@ export default class Pools {
     return this.serialize(pools, pastPools, period, prices, currency);
   }
 
-  private serialize(
+  private async serialize(
     pools: Pool[],
     pastPools: Pool[],
     period: TimeTravelPeriod,
     prices: TokenPrices,
     currency: FiatCurrency
-  ): DecoratedPool[] {
-    return pools.map(pool => {
+  ): Promise<DecoratedPool[]> {
+    const promises = pools.map(async pool => {
       pool.address = this.addressFor(pool.id);
       pool.tokenAddresses = pool.tokensList.map(t => getAddress(t));
       pool.tokens = this.formatPoolTokens(pool);
@@ -78,9 +81,15 @@ export default class Pools {
       const fees = this.calcFees(pool, pastPool);
       const {
         hasLiquidityMiningRewards,
-        liquidityMiningAPR
+        liquidityMiningAPR,
+        liquidityMiningBreakdown
       } = this.calcLiquidityMiningAPR(pool, prices, currency);
-      const totalAPR = this.calcTotalAPR(poolAPR, liquidityMiningAPR);
+      const thirdPartyAPR = await this.calcThirdPartyAPR(pool);
+      const totalAPR = this.calcTotalAPR(
+        poolAPR,
+        liquidityMiningAPR,
+        thirdPartyAPR
+      );
 
       return {
         ...pool,
@@ -91,12 +100,16 @@ export default class Pools {
           fees,
           apr: {
             pool: poolAPR,
+            thirdParty: thirdPartyAPR,
             liquidityMining: liquidityMiningAPR,
+            liquidityMiningBreakdown,
             total: totalAPR
           }
         }
       };
     });
+
+    return Promise.all(promises);
   }
 
   private formatPoolTokens(pool: Pool): PoolToken[] {
@@ -138,6 +151,7 @@ export default class Pools {
     currency: FiatCurrency
   ) {
     let liquidityMiningAPR = '0';
+    let liquidityMiningBreakdown = {};
 
     const liquidityMiningRewards = currentLiquidityMiningRewards[pool.id];
 
@@ -152,17 +166,41 @@ export default class Pools {
         currency,
         pool.totalLiquidity
       );
+      liquidityMiningBreakdown = computeAPRsForPool(
+        liquidityMiningRewards,
+        prices,
+        currency,
+        pool.totalLiquidity
+      );
     }
 
     return {
       hasLiquidityMiningRewards,
-      liquidityMiningAPR
+      liquidityMiningAPR,
+      liquidityMiningBreakdown
     };
   }
 
-  private calcTotalAPR(poolAPR: string, liquidityMiningAPR: string) {
+  /**
+   * Fetch additional APRs not covered by pool swap fees and
+   * liquidity minning rewards. These APRs may require 3rd party
+   * API requests.
+   */
+  private async calcThirdPartyAPR(pool: Pool): Promise<string> {
+    if (isWstETH(pool)) {
+      return await lidoService.calcStEthAPRFor(pool);
+    }
+    return '0';
+  }
+
+  private calcTotalAPR(
+    poolAPR: string,
+    liquidityMiningAPR: string,
+    thirdPartyAPR: string
+  ): string {
     return bnum(poolAPR)
       .plus(liquidityMiningAPR)
+      .plus(thirdPartyAPR)
       .toString();
   }
 
@@ -176,8 +214,9 @@ export default class Pools {
 
   private async timeTravelBlock(period: TimeTravelPeriod): Promise<number> {
     const currentBlock = await this.service.rpcProviderService.getBlockNumber();
-    const dayInSecs = 24 * 60 * 60;
-    const blocksInDay = Math.round(dayInSecs / this.service.blockTime);
+    const blocksInDay = Math.round(
+      twentyFourHoursInSecs / this.service.blockTime
+    );
 
     switch (period) {
       case '24h':

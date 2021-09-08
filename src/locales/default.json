@@ -1,4 +1,10 @@
 {
+    "alerts": {
+        "price-fetch-error": "Our pricing provider, Coingecko is currently down.",
+        "balances-fetch-error": "Failed to fetch token balances.",
+        "allowances-fetch-error": "Failed to fetch token allowances.",
+        "retry-label": "Refresh to try again"
+    },
     "account": "Account",
     "accept": "Accept",
     "action": "Action",
@@ -68,6 +74,7 @@
     "date": "Date",
     "day": "day",
     "delegateFeesTooltip": "Liquidity providers in this pool earn fixed swap fees on every trade utilizing the liquidity in this pool. Control has been delegated to the community, so fees could change in the future if this pool becomes actively managed.",
+    "depositing": "depositing",
     "details": "Details",
     "dynamicSwapFeeLabel": "Dynamic swap fees: Currently <b>{0}</b>",
     "editoTitle": "Put your money to work",
@@ -119,6 +126,9 @@
     "tradeSuccess": "Successfully traded your tokens",
     "tradeInterface": "Trade interface",
     "tradeInterfaceTooltip": "Choose Balancer for the best liquidity across Balancer V1 and V2 pools. Choose Gnosis to buy and sell tokens using gas-less orders while providing MEV protection.",
+    "thirdPartyAPR": {
+        "steth": "stETH staking rewards APR"
+    },
     "investmentPools": "Investment pools",
     "investmentSettled": "Your investment has settled",
     "investmentSuccess": "Your tokens have been added to this pool, and you have received a new LP token representing this investment.",
@@ -203,7 +213,7 @@
     "previewUnwrap": "Preview {0} Unwrap",
     "previewTradeTransactions": "Preview trade transactions",
     "priceImpact": "Price impact",
-    "priceImpactAccept": "I accept the high price impact from withdrawing single token amounts, moving the market price based on the depth of the market.",
+    "priceImpactAccept": "I accept the high price impact from {0} single token amounts, moving the market price based on the depth of the market.",
     "priceImpactCheckbox": "Price impact acknowledgement",
     "priceImpactTolerance": "Price impact tolerance",
     "profit": "Profit (1{0})",
@@ -214,6 +224,7 @@
     "receipt": "Receipt",
     "recentActivityTitle": "Recent activity",
     "noRecentActivity": "Your recent activity will appear here…",
+    "switchNetwork": "Switch Network",
     "transactionAction": {
         "trade": "Trade",
         "approve": "Approve",
@@ -384,9 +395,14 @@
     "weightedPool": "Weighted pool",
     "withdraw": "Withdraw",
     "withdrawal": "Withdrawal",
+    "withdrawing": "withdrawing",
     "withdrawFee": "Withdraw fee",
     "wrapStEthTooltip": "This pool requires Wrapped Liquid Staked ETH 2.0 (wstETH). To maximize your investment, you could wrap some additional stETH.",
     "yearAbbrev": "y",
     "youDidIt": "You did it!",
-    "yourTransactions": "Your transactions in this pool"
+    "yourTransactions": "Your transactions in this pool",
+    "featuredProtocol": "Featured ecosystem protocol",
+    "aboutElementFinance": "Element is an open source protocol for fixed and variable yield markets. It is built on Balancer V2. View and manage your liquidity positions directly on Element.fi.",
+    "viewAndManangeOnElement": "View and manage all pools on Element.fi",
+    "viewOnElement": "View on Element.fi"
 }
