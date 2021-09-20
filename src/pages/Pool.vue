@@ -13,7 +13,7 @@
               :key="i"
               class="mt-2 mr-2 flex items-center px-2 h-10 bg-gray-50 dark:bg-gray-850 rounded-lg"
             >
-              <BalAsset :address="address" :size="24" />
+              <BalAsset :address="address" />
               <span class="ml-2">
                 {{ tokenMeta.symbol }}
               </span>
@@ -97,14 +97,17 @@
         </div>
       </div>
 
-      <div class="order-1 lg:order-2 px-1 lg:px-0">
-        <BalLoadingBlock v-if="loadingPool" class="h-96 sticky top-24" />
+      <div
+        v-if="!isLiquidityBootstrappingPool"
+        class="order-1 lg:order-2 px-1 lg:px-0"
+      >
+        <BalLoadingBlock v-if="loadingPool" class="pool-actions-card h-96" />
         <PoolActionsCard
           v-else-if="!noInitLiquidity"
           :pool="pool"
           :missing-prices="missingPrices"
           @on-tx="onNewTx"
-          class="sticky top-24"
+          class="pool-actions-card"
         />
       </div>
     </div>
@@ -118,25 +121,20 @@ import GauntletIcon from '@/components/images/icons/GauntletIcon.vue';
 import LiquidityMiningTooltip from '@/components/tooltips/LiquidityMiningTooltip.vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
-import { useQueryClient } from 'vue-query';
 import useNumbers from '@/composables/useNumbers';
 import { usePool } from '@/composables/usePool';
 import usePoolQuery from '@/composables/queries/usePoolQuery';
 import usePoolSnapshotsQuery from '@/composables/queries/usePoolSnapshotsQuery';
-import { useRouter } from 'vue-router';
-import { POOLS_ROOT_KEY } from '@/constants/queryKeys';
 import { POOLS } from '@/constants/pools';
 import { EXTERNAL_LINKS } from '@/constants/links';
 import useWeb3 from '@/services/web3/useWeb3';
 import useTokens from '@/composables/useTokens';
 import useApp from '@/composables/useApp';
+import useAlerts, { AlertPriority, AlertType } from '@/composables/useAlerts';
 
 interface PoolPageData {
   id: string;
-  refetchQueriesOnBlockNumber: number;
 }
-
-const REFETCH_QUERIES_BLOCK_BUFFER = 3;
 
 export default defineComponent({
   components: {
@@ -150,14 +148,13 @@ export default defineComponent({
      * COMPOSABLES
      */
     const { appLoading } = useApp();
-    const router = useRouter();
     const { t } = useI18n();
     const route = useRoute();
     const { fNum } = useNumbers();
     const { isWalletReady } = useWeb3();
-    const queryClient = useQueryClient();
     const { prices } = useTokens();
     const { blockNumber } = useWeb3();
+    const { addAlert, removeAlert } = useAlerts();
 
     /**
      * QUERIES
@@ -172,15 +169,16 @@ export default defineComponent({
      * STATE
      */
     const data = reactive<PoolPageData>({
-      id: route.params.id as string,
-      refetchQueriesOnBlockNumber: 0
+      id: route.params.id as string
     });
 
     /**
      * COMPUTED
      */
     const pool = computed(() => poolQuery.data.value);
-    const { isStableLikePool } = usePool(poolQuery.data);
+    const { isStableLikePool, isLiquidityBootstrappingPool } = usePool(
+      poolQuery.data
+    );
 
     const noInitLiquidity = computed(
       () =>
@@ -243,7 +241,7 @@ export default defineComponent({
 
     const poolFeeLabel = computed(() => {
       if (!pool.value) return '';
-      const feeLabel = fNum(pool.value.onchain.swapFee, 'percent');
+      const feeLabel = `${fNum(pool.value.onchain.swapFee, 'percent')}`;
 
       if (feesFixed.value) {
         return t('fixedSwapFeeLabel', [feeLabel]);
@@ -271,24 +269,30 @@ export default defineComponent({
      * METHODS
      */
     function onNewTx(): void {
-      queryClient.invalidateQueries([POOLS_ROOT_KEY, 'current', data.id]);
-      data.refetchQueriesOnBlockNumber =
-        blockNumber.value + REFETCH_QUERIES_BLOCK_BUFFER;
+      poolQuery.refetch.value();
     }
 
     /**
      * WATCHERS
      */
     watch(blockNumber, () => {
-      if (data.refetchQueriesOnBlockNumber === blockNumber.value) {
-        queryClient.invalidateQueries([POOLS_ROOT_KEY]);
-      } else {
-        poolQuery.refetch.value();
-      }
+      poolQuery.refetch.value();
     });
 
     watch(poolQuery.error, () => {
-      router.push({ name: 'home' });
+      if (poolQuery.error.value) {
+        addAlert({
+          id: 'pool-fetch-error',
+          label: t('alerts.pool-fetch-error'),
+          type: AlertType.ERROR,
+          persistent: true,
+          action: poolQuery.refetch.value,
+          actionLabel: t('alerts.retry-label'),
+          priority: AlertPriority.MEDIUM
+        });
+      } else {
+        removeAlert('pool-fetch-error');
+      }
     });
 
     return {
@@ -311,6 +315,7 @@ export default defineComponent({
       feesManagedByGauntlet,
       swapFeeToolTip,
       isStableLikePool,
+      isLiquidityBootstrappingPool,
       // methods
       fNum,
       onNewTx
@@ -323,5 +328,15 @@ export default defineComponent({
 .pool-title {
   @apply mr-4 capitalize mt-2;
   font-variation-settings: 'wght' 700;
+}
+
+.pool-actions-card {
+  @apply relative;
+}
+
+@media (min-width: 768px) and (min-height: 600px) {
+  .pool-actions-card {
+    @apply sticky top-24;
+  }
 }
 </style>

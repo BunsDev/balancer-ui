@@ -6,22 +6,18 @@ export const TOKENS = {
   },
   AddressMap: {
     '1': {
-      ETH: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
       WETH: '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2',
       BAL: '0xba100000625a3754423978a60c9317c58a424e3d'
     },
     '42': {
-      ETH: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
       WETH: '0xdFCeA9088c8A88A76FF74892C1457C17dfeef9C1',
       BAL: '0x41286Bb1D3E870f3F750eB7E1C25d7E48c8A1Ac7'
     },
     '137': {
-      ETH: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
       WETH: '0x7ceb23fd6bc0add59e62ac25578270cff1b9f619',
       BAL: '0x9a71012b13ca4d3d0cdc72a177df3ef03b0e76a3'
     },
     '42161': {
-      ETH: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE',
       WETH: '0x82aF49447D8a07e3bd95BD0d56f35241523fBab1',
       BAL: '0x040d1EdC9569d4Bab2D15287Dc5A4F10F56a56B8'
     }
@@ -63,6 +59,8 @@ export const TOKENS = {
           '0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e',
         '0xa0b862f60edef4452f25b4160f177db44deb6cf1':
           '0x6810e776880c02933d47db1b9fc05908e5386b96',
+        '0xb965029343d55189c25a7f3e0c9394dc0f5d41b1':
+          '0x86772b1409b61c639eaac9ba0acfbb6e238e5f83',
         '0xc3ae0333f0f34aa734d5493276223d95b8f9cb37':
           '0xa1d65e8fb6e87b60feccbc582f7f97804b725521',
         '0xd4d42f0b6def4ce0383636770ef773390d85c61a':

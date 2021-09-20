@@ -22,7 +22,8 @@
               class="mr-2 text-lg font-medium w-1/2 break-words leading-none"
               :title="total"
             >
-              {{ missingPrices ? '-' : total }}
+              <template v-if="missingPrices">-</template>
+              <span v-else>{{ total }}</span>
             </span>
             <BalRangeInput
               class="w-1/2"
@@ -91,67 +92,25 @@
         hasZeroBalance ? '' : 'border-t'
       ]"
     >
-      <BalTextInput
-        v-for="(token, i) in pool.tokenAddresses"
-        :key="token"
-        :name="token"
-        v-model="amounts[i]"
+      <TokenInput
+        v-for="(tokenAddress, i) in tokenAddresses"
+        :key="tokenAddress"
+        v-model:amount="amounts[i]"
+        v-model:address="tokenAddresses[i]"
         v-model:isValid="validInputs[i]"
-        :rules="amountRules(i)"
-        type="number"
-        min="0"
-        step="any"
-        placeholder="0"
-        :decimal-limit="tokenDecimals(i)"
-        :disabled="loading"
-        validate-on="input"
-        prepend-border
-        append-shadow
-      >
-        <template v-slot:prepend>
-          <div class="flex items-center h-full w-24">
-            <BalAsset :address="token" />
-            <div class="flex flex-col ml-3">
-              <span class="font-medium text-sm leading-none w-14 truncate">
-                {{ pool.onchain.tokens[token].symbol }}
-              </span>
-              <span
-                v-if="!isStableLikePool"
-                class="leading-none text-xs mt-1 text-gray-500"
-              >
-                {{ fNum(tokenWeights[i], 'percent_lg') }}
-              </span>
-            </div>
-          </div>
-        </template>
-        <template v-slot:info>
-          <div
-            class="cursor-pointer"
-            @click.prevent="amounts[i] = tokenBalance(i).toString()"
-          >
-            {{ $t('balance') }}: {{ formatBalance(i) }}
-          </div>
-        </template>
-        <template v-slot:append>
-          <div class="p-2">
-            <BalBtn
-              size="xs"
-              color="white"
-              @click.prevent="amounts[i] = tokenBalance(i).toString()"
-            >
-              {{ $t('max') }}
-            </BalBtn>
-          </div>
-        </template>
-      </BalTextInput>
+        :weight="isStableLikePool ? 0 : tokenWeights[i]"
+        :name="tokenAddress"
+        class="mb-4"
+        fixedToken
+      />
 
       <div v-if="isWethPool" class="flex items-center mb-4">
         <router-link
           :to="{
             name: 'trade',
             params: {
-              assetIn: TOKENS.AddressMap[appNetworkConfig.key].ETH,
-              assetOut: TOKENS.AddressMap[appNetworkConfig.key].WETH
+              assetIn: appNetworkConfig.nativeAsset.address,
+              assetOut: appNetworkConfig.addresses.weth
             }
           }"
           class="text-xs text-gray-500 underline"
@@ -213,6 +172,7 @@
           <span
             >{{ $t('priceImpact') }}: {{ fNum(priceImpact, 'percent') }}</span
           >
+          >
           <BalTooltip>
             <template v-slot:activator>
               <BalIcon
@@ -259,8 +219,10 @@
             block
             @click="trackGoal(Goals.ClickInvest)"
           >
-            {{ $t('invest') }}
-            {{ missingPrices || total.length > 15 ? '' : total }}
+            <span>{{ $t('invest') }}</span>
+            <span v-if="!(missingPrices || total.length > 15)"
+              >&nbsp;{{ total }}</span
+            >
           </BalBtn>
         </template>
       </template>
@@ -309,6 +271,7 @@ import { TransactionResponse } from '@ethersproject/abstract-provider';
 import useEthers from '@/composables/useEthers';
 import useTransactions from '@/composables/useTransactions';
 import { usePool } from '@/composables/usePool';
+import TokenInput from '@/components/inputs/TokenInput/TokenInput.vue';
 
 export enum FormTypes {
   proportional = 'proportional',
@@ -319,6 +282,7 @@ type DataProps = {
   investForm: FormRef;
   investType: FormTypes;
   loading: boolean;
+  tokenAddresses: string[];
   amounts: string[];
   propMax: string[];
   validInputs: boolean[];
@@ -333,7 +297,8 @@ export default defineComponent({
   name: 'InvestForm',
 
   components: {
-    FormTypeToggle
+    FormTypeToggle,
+    TokenInput
   },
 
   emits: ['success'],
@@ -348,6 +313,7 @@ export default defineComponent({
       investForm: {} as FormRef,
       investType: FormTypes.proportional,
       loading: false,
+      tokenAddresses: props.pool.tokenAddresses,
       amounts: [],
       propMax: [],
       validInputs: [],
@@ -428,7 +394,13 @@ export default defineComponent({
     const total = computed(() => {
       const total = props.pool.tokenAddresses
         .map((_, i) => amountUSD(i))
-        .reduce((a, b) => a + b, 0);
+        .reduce(
+          (a, b) =>
+            bnum(a)
+              .plus(b)
+              .toNumber(),
+          0
+        );
 
       if (total < 0) return fNum(0, 'usd');
       return fNum(total, 'usd');
@@ -460,8 +432,14 @@ export default defineComponent({
 
     const propMaxUSD = computed(() => {
       const total = props.pool.tokenAddresses
-        .map((token, i) => toFiat(Number(data.propMax[i]), token))
-        .reduce((a, b) => a + b, 0);
+        .map((token, i) => toFiat(data.propMax[i], token))
+        .reduce(
+          (a, b) =>
+            bnum(a)
+              .plus(b)
+              .toNumber(),
+          0
+        );
 
       return fNum(total, 'usd');
     });
@@ -469,7 +447,13 @@ export default defineComponent({
     const balanceMaxUSD = computed(() => {
       const total = props.pool.tokenAddresses
         .map((token, i) => toFiat(balances.value[i], token))
-        .reduce((a, b) => a + b, 0);
+        .reduce(
+          (a, b) =>
+            bnum(a)
+              .plus(b)
+              .toNumber(),
+          0
+        );
 
       return fNum(total, 'usd');
     });
@@ -545,7 +529,7 @@ export default defineComponent({
     }
 
     function amountUSD(index) {
-      const amount = fullAmounts.value[index] || 0;
+      const amount = fullAmounts.value[index] || '0';
       return toFiat(amount, props.pool.tokenAddresses[index]);
     }
 

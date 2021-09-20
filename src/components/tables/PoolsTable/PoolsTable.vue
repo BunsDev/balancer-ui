@@ -50,12 +50,13 @@
         <div v-if="!isLoading" class="px-6 py-4">
           <TokenPills
             :tokens="orderedPoolTokens(pool)"
-            :isStablePool="isStableLike(pool)"
+            :isStablePool="isStableLike(pool.poolType)"
+            :selectedTokens="selectedTokens"
           />
         </div>
       </template>
       <template v-slot:aprCell="pool">
-        <div class="px-6 py-4 -mt-1 flex justify-end">
+        <div class="px-6 py-4 -mt-1 flex justify-end font-numeric">
           {{
             Number(pool.dynamic.apr.pool) > 10000
               ? '-'
@@ -69,7 +70,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue';
+import { defineComponent, PropType, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 
@@ -121,6 +122,9 @@ export default defineComponent({
     isPaginated: {
       type: Boolean,
       default: false
+    },
+    selectedTokens: {
+      type: Array as PropType<string[]>
     }
   },
 
@@ -158,7 +162,8 @@ export default defineComponent({
         id: 'myBalance',
         hidden: !props.showPoolShares,
         sortKey: pool => Number(pool.shares),
-        width: 150
+        width: 150,
+        cellClassName: 'font-numeric'
       },
       {
         name: t('poolValue'),
@@ -170,7 +175,8 @@ export default defineComponent({
           if (apr === Infinity || isNaN(apr)) return 0;
           return apr;
         },
-        width: 150
+        width: 150,
+        cellClassName: 'font-numeric'
       },
       {
         name: t('volume24h', [t('hourAbbrev')]),
@@ -182,7 +188,8 @@ export default defineComponent({
           if (apr === Infinity || isNaN(apr)) return 0;
           return apr;
         },
-        width: 175
+        width: 175,
+        cellClassName: 'font-numeric'
       },
       {
         name: t('apr'),
@@ -206,7 +213,7 @@ export default defineComponent({
     }
 
     function orderedPoolTokens(pool: DecoratedPoolWithShares): PoolToken[] {
-      if (isStableLike(pool)) return pool.tokens;
+      if (isStableLike(pool.poolType)) return pool.tokens;
 
       const sortedTokens = pool.tokens.slice();
       sortedTokens.sort((a, b) => parseFloat(b.weight) - parseFloat(a.weight));

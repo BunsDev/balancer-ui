@@ -1,5 +1,5 @@
 <template>
-  <BalCard class="relative" :shadow="tradeCardShadow" no-border>
+  <BalCard class="relative card-container" :shadow="tradeCardShadow" no-border>
     <template v-slot:header>
       <div class="w-full flex items-center justify-between">
         <h4 class="font-bold">{{ title }}</h4>
@@ -7,19 +7,15 @@
       </div>
     </template>
     <div>
-      <TradePairGP
-        :token-in-amount-input="tokenInAmount"
-        :token-in-address-input="tokenInAddress"
-        :token-out-amount-input="tokenOutAmount"
-        :token-out-address-input="tokenOutAddress"
-        :exact-in="exactIn"
-        :effective-price-message="trading.effectivePriceMessage"
-        @token-in-amount-change="value => (tokenInAmount = value)"
-        @token-in-address-change="value => (tokenInAddress = value)"
-        @token-out-amount-change="value => (tokenOutAmount = value)"
-        @token-out-address-change="value => (tokenOutAddress = value)"
-        @exact-in-change="value => (exactIn = value)"
-        @change="trading.handleAmountChange"
+      <TradePair
+        v-model:tokenInAmount="tokenInAmount"
+        v-model:tokenInAddress="tokenInAddress"
+        v-model:tokenOutAmount="tokenOutAmount"
+        v-model:tokenOutAddress="tokenOutAddress"
+        v-model:exactIn="exactIn"
+        :effectivePriceMessage="trading.effectivePriceMessage"
+        @amountChange="trading.handleAmountChange"
+        class="mb-4"
       />
       <BalAlert
         v-if="error"
@@ -113,7 +109,7 @@ import TradeSettingsPopover, {
 
 import { configService } from '@/services/config/config.service';
 
-import TradePairGP from './TradePairGP.vue';
+import TradePair from '../TradeCard/TradePair.vue';
 import useWeb3 from '@/services/web3/useWeb3';
 import useRelayerApproval, {
   Relayer
@@ -123,7 +119,7 @@ const { nativeAsset } = configService.network;
 
 export default defineComponent({
   components: {
-    TradePairGP,
+    TradePair,
     TradePreviewModalGP,
     TradeSettingsPopover
   },
@@ -319,7 +315,7 @@ export default defineComponent({
     }
 
     function switchToWETH() {
-      tokenInAddress.value = TOKENS.AddressMap[appNetworkConfig.key].WETH;
+      tokenInAddress.value = appNetworkConfig.addresses.weth;
     }
 
     function handlePreviewButton() {
@@ -371,3 +367,9 @@ export default defineComponent({
   }
 });
 </script>
+<style scoped>
+/* This is needed because the trade settings popover overflows */
+.card-container {
+  overflow: unset;
+}
+</style>

@@ -9,11 +9,13 @@
             <span>
               {{ $t('effectivePrice') }}
             </span>
-            {{
-              trading.exactIn.value
-                ? trading.effectivePriceMessage.value.tokenIn
-                : trading.effectivePriceMessage.value.tokenOut
-            }}
+            <span
+              v-html="
+                trading.exactIn.value
+                  ? trading.effectivePriceMessage.value.tokenIn
+                  : trading.effectivePriceMessage.value.tokenOut
+              "
+            />
           </div>
         </template>
         <div>
@@ -60,8 +62,8 @@
                     "
                   >
                     / {{ $t('priceImpact') }}:
-                    {{ fNum(trading.sor.priceImpact.value, 'percent') }}</span
-                  >
+                    {{ fNum(trading.sor.priceImpact.value, 'percent') }}
+                  </span>
                 </div>
               </div>
             </div>
@@ -103,9 +105,7 @@
             <div>
               {{ labels.tradeSummary.totalBeforeFees }}
             </div>
-            <div>
-              {{ summary.amountBeforeFees }}
-            </div>
+            <div v-html="summary.amountBeforeFees" />
           </div>
           <div class="summary-item-row" v-if="trading.isGnosisTrade.value">
             <div>{{ $t('tradeSummary.gasCosts') }}</div>
@@ -113,8 +113,8 @@
           </div>
           <div class="summary-item-row">
             <div>{{ labels.tradeSummary.tradeFees }}</div>
-            <div>
-              {{
+            <div
+              v-html="
                 trading.isWrapUnwrapTrade.value
                   ? zeroFee
                   : trading.isGnosisTrade.value
@@ -122,8 +122,8 @@
                     ? `-${summary.tradeFees}`
                     : `+${summary.tradeFees}`
                   : summary.tradeFees
-              }}
-            </div>
+              "
+            />
           </div>
         </div>
         <template v-slot:footer>
@@ -134,21 +134,19 @@
               <div class="w-64">
                 {{ labels.tradeSummary.totalAfterFees }}
               </div>
-              <div>
-                {{ summary.totalWithoutSlippage }}
-              </div>
+              <div v-html="summary.totalWithoutSlippage" />
             </div>
             <div class="summary-item-row text-gray-500 dark:text-gray-400">
               <div class="w-64">
                 {{ labels.tradeSummary.totalWithSlippage }}
               </div>
-              <div>
-                {{
+              <div
+                v-html="
                   trading.isWrapUnwrapTrade.value
                     ? ''
                     : summary.totalWithSlippage
-                }}
-              </div>
+                "
+              />
             </div>
           </div>
         </template>
@@ -481,11 +479,13 @@ export default defineComponent({
       }
 
       if (showSummaryInFiat.value) {
-        return mapValues(summaryItems, itemValue =>
-          fNum(
-            toFiat(itemValue, exactIn ? tokenOut.address : tokenIn.address),
-            'usd'
-          )
+        return mapValues(
+          summaryItems,
+          itemValue =>
+            `${fNum(
+              toFiat(itemValue, exactIn ? tokenOut.address : tokenIn.address),
+              'usd'
+            )}`
         );
       } else {
         return mapValues(

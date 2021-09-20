@@ -1,8 +1,10 @@
 import { TransactionResponse } from '@ethersproject/abstract-provider';
 import configs from '@/lib/config';
 import { callStatic, sendTransaction } from '@/lib/utils/balancer/web3';
-import { default as vaultAbi } from '@/lib/abi/Vault.json';
-import { default as helpersAbi } from '@/lib/abi/BalancerHelpers.json';
+import {
+  Vault__factory,
+  BalancerHelpers__factory
+} from '@balancer-labs/typechain';
 import JoinParams from './serializers/JoinParams';
 import ExitParams from './serializers/ExitParams';
 import { FullPool } from '@/services/balancer/subgraph/types';
@@ -35,7 +37,7 @@ export default class Exchange {
     return await callStatic(
       provider,
       this.helpersAddress,
-      helpersAbi,
+      BalancerHelpers__factory.abi,
       'queryJoin',
       txParams
     );
@@ -72,7 +74,7 @@ export default class Exchange {
     return await sendTransaction(
       provider,
       this.vaultAddress,
-      vaultAbi,
+      Vault__factory.abi,
       'joinPool',
       txParams
     );
@@ -97,7 +99,7 @@ export default class Exchange {
     return await callStatic(
       provider,
       this.helpersAddress,
-      helpersAbi,
+      BalancerHelpers__factory.abi,
       'queryExit',
       txParams
     );
@@ -124,7 +126,7 @@ export default class Exchange {
     return await sendTransaction(
       provider,
       this.vaultAddress,
-      vaultAbi,
+      Vault__factory.abi,
       'exitPool',
       txParams
     );

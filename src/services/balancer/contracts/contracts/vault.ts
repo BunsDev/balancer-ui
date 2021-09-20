@@ -1,5 +1,5 @@
 import Service from '../balancer-contracts.service';
-import { default as vaultAbi } from '@/lib/abi/Vault.json';
+import { Vault__factory } from '@balancer-labs/typechain';
 import { Multicaller } from '@/lib/utils/balancer/contract';
 import { getAddress } from '@ethersproject/address';
 import { formatUnits } from '@ethersproject/units';
@@ -7,6 +7,8 @@ import { BigNumber } from '@ethersproject/bignumber';
 import { OnchainPoolData, PoolType } from '../../subgraph/types';
 import ConfigService from '@/services/config/config.service';
 import { TokenInfoMap } from '@/types/TokenList';
+import { isWeightedLike, isStableLike } from '@/composables/usePool';
+import { toNormalizedWeights } from '@balancer-labs/balancer-js';
 
 export default class Vault {
   service: Service;
@@ -25,7 +27,7 @@ export default class Vault {
     const vaultMultiCaller = new Multicaller(
       this.configService.network.key,
       this.service.provider,
-      vaultAbi
+      Vault__factory.abi
     );
     const tokenMultiCaller = new Multicaller(
       this.configService.network.key,
@@ -39,9 +41,9 @@ export default class Vault {
     tokenMultiCaller.call('decimals', poolAddress, 'decimals');
     tokenMultiCaller.call('swapFee', poolAddress, 'getSwapFeePercentage');
 
-    if (type === 'Weighted') {
+    if (isWeightedLike(type)) {
       tokenMultiCaller.call('weights', poolAddress, 'getNormalizedWeights', []);
-    } else if (type === 'Stable' || type === 'MetaStable') {
+    } else if (isStableLike(type)) {
       tokenMultiCaller.call('amp', poolAddress, 'getAmplificationParameter');
     }
 
@@ -90,15 +92,10 @@ export default class Vault {
     type: PoolType,
     tokens: TokenInfoMap
   ) {
-    if (type == 'Weighted') {
-      const totalWeight = weights.reduce((a, b) => a.add(b), BigNumber.from(0));
-      return weights.map(
-        w =>
-          ((100 / Number(formatUnits(totalWeight, 10))) *
-            Number(formatUnits(w, 10))) /
-          100
-      );
-    } else if (type === 'Stable') {
+    if (isWeightedLike(type)) {
+      // toNormalizedWeights returns weights as 18 decimal fixed point
+      return toNormalizedWeights(weights).map(w => formatUnits(w, 18));
+    } else if (isStableLike(type)) {
       const tokensList = Object.values(tokens);
       return tokensList.map(() => 1 / tokensList.length);
     } else {

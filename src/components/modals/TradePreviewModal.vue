@@ -14,7 +14,9 @@
             {{ fNum(amountIn, 'token') }} {{ symbolIn }} ->
             {{ fNum(amountOut, 'token') }} {{ symbolOut }}
           </div>
-          <div class="text-gray-500 text-sm">{{ fNum(valueIn, 'usd') }}</div>
+          <div class="text-gray-500 text-sm">
+            {{ fNum(valueIn, 'usd') }}
+          </div>
         </div>
       </div>
       <div>

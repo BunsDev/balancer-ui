@@ -1,5 +1,6 @@
 import { parseUnits } from '@ethersproject/units';
 import { TransactionResponse, Web3Provider } from '@ethersproject/providers';
+import { MerkleRedeem__factory } from '@balancer-labs/typechain';
 import { toWei, soliditySha3 } from 'web3-utils';
 import axios from 'axios';
 
@@ -14,7 +15,6 @@ import { loadTree } from '@/lib/utils/merkle';
 import configs from '@/lib/config';
 import { TOKENS } from '@/constants/tokens';
 
-import merkleRedeemAbi from '@/lib/abi/MerkleRedeem.json';
 import { coingeckoService } from './coingecko/coingecko.service';
 
 type Snapshot = Record<number, string>;
@@ -30,6 +30,11 @@ export const constants: Record<NetworkId, Record<string, string>> = {
     merkleRedeem: '0x3bc73D276EEE8cA9424Ecb922375A0357c1833B3',
     snapshot:
       'https://raw.githubusercontent.com/balancer-labs/bal-mining-scripts/master/reports-kovan/_current.json'
+  },
+  42161: {
+    merkleRedeem: '0x6bd0B17713aaa29A2d7c9A39dDc120114f9fD809',
+    snapshot:
+      'https://raw.githubusercontent.com/balancer-labs/bal-mining-scripts/master/reports/_current-arbitrum.json'
   }
 };
 
@@ -49,7 +54,7 @@ export async function getClaimStatus(
   ids: number,
   account: string
 ): Promise<ClaimStatus[]> {
-  return await call(provider, merkleRedeemAbi, [
+  return await call(provider, MerkleRedeem__factory.abi, [
     constants[network].merkleRedeem,
     'claimStatus',
     [account, 1, ids]
@@ -193,7 +198,7 @@ export async function claimRewards(
     return sendTransaction(
       provider,
       configs[network].addresses.merkleRedeem,
-      merkleRedeemAbi,
+      MerkleRedeem__factory.abi,
       'claimWeeks',
       [account, claims]
     );

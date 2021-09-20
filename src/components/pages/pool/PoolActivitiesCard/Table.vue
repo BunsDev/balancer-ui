@@ -48,14 +48,14 @@
                 :address="tokenAmount.address"
                 class="mr-2 flex-shrink-0"
               />
-              {{ tokenAmount.amount }}
+              <span class="font-numeric">{{ tokenAmount.amount }}</span>
             </div>
           </template>
         </div>
       </template>
 
       <template v-slot:valueCell="action">
-        <div class="px-6 py-4 flex justify-end">
+        <div class="px-6 py-4 flex justify-end font-numeric">
           {{ fNum(action.value, 'usd_m') }}
         </div>
       </template>
@@ -97,9 +97,9 @@ import {
 } from '@/services/balancer/subgraph/types';
 import { ColumnDefinition } from '@/components/_global/BalTable/BalTable.vue';
 import { formatDistanceToNow } from 'date-fns';
-import { bnum } from '@balancer-labs/sor2/dist/bmath';
 import useWeb3 from '@/services/web3/useWeb3';
 import useBreakpoints from '@/composables/useBreakpoints';
+import { bnum } from '@balancer-labs/sor2';
 
 type TokenAmount = {
   address: string;

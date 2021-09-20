@@ -10,7 +10,8 @@ import { POOLS } from '@/constants/pools';
 import useApp from '../useApp';
 import useUserSettings from '../useUserSettings';
 import { forChange } from '@/lib/utils';
-import { isStableLike } from '../usePool';
+import { isInvestment, isStableLike } from '../usePool';
+import { getAddress } from '@ethersproject/address';
 
 export default function usePoolQuery(
   id: string,
@@ -43,7 +44,10 @@ export default function usePoolQuery(
       }
     });
 
-    if (isStableLike(pool) && !POOLS.Stable.AllowList.includes(id)) {
+    if (
+      (isStableLike(pool.poolType) && !POOLS.Stable.AllowList.includes(id)) ||
+      (isInvestment(pool.poolType) && !POOLS.Investment.AllowList.includes(id))
+    ) {
       throw new Error('Pool not allowed');
     }
 
@@ -53,20 +57,22 @@ export default function usePoolQuery(
     ]);
     await forChange(dynamicDataLoading, false);
 
+    // Need to fetch onchain pool data first so that calculations can be
+    // performed in the decoration step.
+    const onchainData = await balancerContractsService.vault.getPoolData(
+      id,
+      pool.poolType,
+      getTokens(pool.tokensList.map(address => getAddress(address)))
+    );
+
     const [decoratedPool] = await balancerSubgraphService.pools.decorate(
-      [pool],
+      [{ ...pool, onchain: onchainData }],
       '24h',
       prices.value,
       currency.value
     );
 
-    const onchainData = await balancerContractsService.vault.getPoolData(
-      id,
-      pool.poolType,
-      getTokens(decoratedPool.tokenAddresses)
-    );
-
-    return { ...decoratedPool, onchain: onchainData };
+    return { onchain: onchainData, ...decoratedPool };
   };
 
   const queryOptions = reactive({

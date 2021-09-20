@@ -7,8 +7,10 @@ export type QueryBuilder = (
 
 export enum PoolType {
   Weighted = 'Weighted',
+  Investment = 'Investment',
   Stable = 'Stable',
-  MetaStable = 'MetaStable'
+  MetaStable = 'MetaStable',
+  LiquidityBootstrapping = 'LiquidityBootstrapping'
 }
 export type TimeTravelPeriod = '24h';
 
@@ -34,6 +36,7 @@ export interface Pool {
   totalSwapFee: string;
   totalSwapVolume: string;
   hasLiquidityMiningRewards: boolean;
+  onchain?: OnchainPoolData;
 }
 
 export interface DecoratedPool extends Pool {
@@ -71,6 +74,8 @@ export interface OnchainPoolData {
 export interface FullPool extends DecoratedPool {
   onchain: OnchainPoolData;
 }
+
+export type AnyPool = Pool | FullPool | DecoratedPoolWithShares;
 
 export interface PoolShare {
   poolId: {
