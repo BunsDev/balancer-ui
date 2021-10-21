@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { configService } from '@/services/config/config.service';
+import { PoolToken, poolCreator } from '@/services/pool-creator/pool-creator.service'
 import TokenInput from '@/components/inputs/TokenInput/TokenInput.vue';
 import TokenWeightInput from '@/components/inputs/TokenInput/TokenWeightInput.vue';
 import useWeb3 from '@/services/web3/useWeb3';
@@ -8,6 +9,7 @@ import useNumbers from '@/composables/useNumbers';
 import useBreakpoints from '@/composables/useBreakpoints';
 import anime from 'animejs';
 import { sum, sumBy } from 'lodash';
+import { BigNumber } from 'bignumber.js';
 
 const emit = defineEmits(['update:tokenWeights'])
 
@@ -25,7 +27,7 @@ const emptyTokenWeight: TokenWeight = {
   isLocked: false
 };
 
-const { userNetworkConfig } = useWeb3();
+const { userNetworkConfig, getProvider } = useWeb3();
 const networkName = configService.network.name;
 
 const _tokenOutAmount = ref();
@@ -136,6 +138,29 @@ const totalWeight = computed(() => {
   return Math.ceil(sumBy(tokenWeights, w => w.weight));
 });
 
+const createDisabled = computed(() => {
+  if (totalWeight.value > 100) return true;
+  return false;
+});
+
+const poolSymbol = computed(() => {
+  return 'WETH-USD';
+})
+
+const createPool = () => {
+  const provider = getProvider();
+  const poolTokens: PoolToken[] = tokenWeights.map(w => {
+    return { address: w.tokenAddress, weight: new BigNumber(`${w.weight}e16`) };
+  });
+  poolCreator.createWeightedPool(
+    provider,
+    'MyPool',
+    poolSymbol.value,
+    '0.01',
+    poolTokens
+  );
+}
+
 const addTokenListElementRef = (el: HTMLElement) => {
   if (!tokenWeightItemElements.includes(el)) {
     tokenWeightItemElements.push(el);
@@ -191,6 +216,12 @@ const addTokenListElementRef = (el: HTMLElement) => {
           </div>
         </div>
       </BalCard>
+      <BalBtn
+        :label="'Create Pool'"
+        :disabled="createDisabled"
+        block
+        @click.prevent="createPool"
+      />
     </BalStack>
   </BalCard>
 </template>
