@@ -1,17 +1,22 @@
 <script setup lang="ts">
+import { AddressZero } from '@ethersproject/constants';
 import { configService } from '@/services/config/config.service';
-import { PoolToken, poolCreator } from '@/services/pool-creator/pool-creator.service'
+import {
+  PoolToken,
+  poolCreator
+} from '@/services/pool-creator/pool-creator.service';
 import TokenInput from '@/components/inputs/TokenInput/TokenInput.vue';
 import TokenWeightInput from '@/components/inputs/TokenInput/TokenWeightInput.vue';
 import useWeb3 from '@/services/web3/useWeb3';
 import { computed, onMounted, reactive, ref, nextTick } from 'vue';
 import useNumbers from '@/composables/useNumbers';
 import useBreakpoints from '@/composables/useBreakpoints';
+import useTokens from '@/composables/useTokens';
 import anime from 'animejs';
 import { sum, sumBy } from 'lodash';
 import { BigNumber } from 'bignumber.js';
 
-const emit = defineEmits(['update:tokenWeights'])
+const emit = defineEmits(['update:tokenWeights']);
 
 export type TokenWeight = {
   tokenAddress: string;
@@ -28,6 +33,7 @@ const emptyTokenWeight: TokenWeight = {
 };
 
 const { userNetworkConfig, getProvider } = useWeb3();
+const { getToken } = useTokens();
 const networkName = configService.network.name;
 
 const _tokenOutAmount = ref();
@@ -89,7 +95,7 @@ const addTokenToPool = async () => {
   wrapperHeight.value += tokenWeightItemHeight.value;
 
   tokenWeights.push({ ...emptyTokenWeight, id: tokenWeights.length - 1 });
-  emit('update:tokenWeights', tokenWeights)
+  emit('update:tokenWeights', tokenWeights);
 
   // to avoid reflow we are going to transform the totals + add token
   // down instead of having the new token weight item shift them
@@ -144,8 +150,14 @@ const createDisabled = computed(() => {
 });
 
 const poolSymbol = computed(() => {
-  return 'WETH-USD';
-})
+  const tokenSymbols = tokenWeights.map((token: TokenWeight) => {
+    const weightRounded = Math.round(token.weight);
+    const tokenInfo = getToken(token.tokenAddress);
+    return `${Math.round(weightRounded)}${tokenInfo.symbol}`;
+  });
+
+  return tokenSymbols.join('-');
+});
 
 const createPool = () => {
   const provider = getProvider();
@@ -157,9 +169,10 @@ const createPool = () => {
     'MyPool',
     poolSymbol.value,
     '0.01',
-    poolTokens
+    poolTokens,
+    AddressZero
   );
-}
+};
 
 const addTokenListElementRef = (el: HTMLElement) => {
   if (!tokenWeightItemElements.includes(el)) {
