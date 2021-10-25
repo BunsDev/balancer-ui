@@ -1,11 +1,10 @@
 import { Contract } from '@ethersproject/contracts';
 import { ErrorCode } from '@ethersproject/logger';
-import { TransactionResponse } from '@ethersproject/providers';
-import { JsonRpcProvider } from '@balancer-labs/sor2/node_modules/@ethersproject/providers';
+import { JsonRpcProvider, TransactionResponse, Web3Provider } from '@ethersproject/providers';
 import { rpcProviderService as _rpcProviderService } from '../rpc-provider/rpc-provider.service';
 import { logFailedTx } from '@/lib/utils/logging';
 import { gasPriceService } from '@/services/gas-price/gas-price.service';
-import { configService } from '@/services/config/config.service';
+import { configService as _configService } from '@/services/config/config.service';
 
 interface Web3Profile {
   ens: string | null;
@@ -15,13 +14,17 @@ const RPC_INVALID_PARAMS_ERROR_CODE = -32602;
 const EIP1559_UNSUPPORTED_REGEX = /network does not support EIP-1559/i;
 
 export default class Web3Service {
-  provider: JsonRpcProvider;
+  provider: Web3Provider | JsonRpcProvider;
 
   constructor(
     readonly rpcProviderService = _rpcProviderService,
-    private readonly configService = configService
+    private readonly configService = _configService
   ) {
     this.provider = this.rpcProviderService.jsonProvider;
+  }
+
+  public setProvider(provider: Web3Provider | JsonRpcProvider) {
+    this.provider = provider;
   }
 
   async getEnsName(address: string): Promise<string | null> {
