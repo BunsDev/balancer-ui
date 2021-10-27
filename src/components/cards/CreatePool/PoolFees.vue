@@ -13,7 +13,12 @@ import usePoolCreation from '@/composables/pools/usePoolCreation';
 const emit = defineEmits(['nextStep']);
 
 const { fNum } = useNumbers();
-const { initialFee, feeManagementType, setFeeManagement, thirdPartyFeeController } = usePoolCreation();
+const {
+  initialFee,
+  feeManagementType,
+  setFeeManagement,
+  thirdPartyFeeController
+} = usePoolCreation();
 const { t } = useI18n();
 const { account } = useWeb3();
 const isCustomFee = ref(false);
@@ -60,9 +65,9 @@ const { userNetworkConfig } = useWeb3();
 
 const onChangeFeeManagementType = (val: boolean) => {
   if (val) {
-    setFeeManagement('fixed')
+    setFeeManagement('fixed');
   }
-}
+};
 </script>
 
 <template>
@@ -116,7 +121,11 @@ const onChangeFeeManagementType = (val: boolean) => {
           class="ml-2"
         />
       </BalStack>
-      <BalStack vertical spacing="xs" v-if="['address', 'fixed', 'self'].includes(feeManagementType)">
+      <BalStack
+        vertical
+        spacing="xs"
+        v-if="['address', 'fixed', 'self'].includes(feeManagementType)"
+      >
         <h6 class="mb-1">Alternative fee management options</h6>
         <BalRadio
           v-model="feeManagementType"
@@ -147,11 +156,7 @@ const onChangeFeeManagementType = (val: boolean) => {
         v-if="['address', 'self'].includes(feeManagementType)"
       >
         <h6 class="mb-1">Set an address to control fees</h6>
-        <BalRadio
-          v-model="feeManagementType"
-          value="self"
-          name="addressOption"
-        >
+        <BalRadio v-model="feeManagementType" value="self" name="addressOption">
           <template v-slot:label>
             <span>
               {{ $t('createAPool.myAddressOption', [_shorten(account)]) }}
@@ -170,11 +175,7 @@ const onChangeFeeManagementType = (val: boolean) => {
           </template>
         </BalRadio>
       </BalStack>
-      <BalStack
-        vertical
-        v-if="feeManagementType === 'address'"
-        spacing="xs"
-      >
+      <BalStack vertical v-if="feeManagementType === 'address'" spacing="xs">
         <h6>{{ $t('createAPool.customAddressTitle') }}</h6>
         <p class="text-gray-600 mb-1">
           {{ $t('createAPool.customAddressInfo') }}
