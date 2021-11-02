@@ -7,7 +7,7 @@
     :is-paginated="poolActivitiesHasNextPage"
     @load-more="loadMorePoolActivities"
     :no-results-label="
-      poolActivityType === PoolActivityTab.ALL_ACTIVITY
+      poolActivityType === PoolTransactionsTab.ALL_ACTIVITY
         ? $t('noTransactionsPool')
         : $t('noTransactionsUserPool')
     "
@@ -18,17 +18,18 @@
 import { defineComponent, computed, PropType } from 'vue';
 import { useRoute } from 'vue-router';
 import { flatten } from 'lodash';
-import Table from './Table.vue';
 import usePoolActivitiesQuery from '@/composables/queries/usePoolActivitiesQuery';
 import usePoolUserActivitiesQuery from '@/composables/queries/usePoolUserActivitiesQuery';
+
 import { FullPool } from '@/services/balancer/subgraph/types';
-import { PoolActivityTab } from './types';
+
+import { PoolTransactionsTab } from '../types';
+import Table from './Table.vue';
 
 export default defineComponent({
   components: {
     Table
   },
-
   props: {
     pool: {
       type: Object as PropType<FullPool>,
@@ -39,30 +40,26 @@ export default defineComponent({
       default: false
     },
     poolActivityType: {
-      type: String as PropType<PoolActivityTab>,
-      default: PoolActivityTab.ALL_ACTIVITY
+      type: String as PropType<PoolTransactionsTab>,
+      default: PoolTransactionsTab.ALL_ACTIVITY
     }
   },
-
   setup(props) {
     /**
      * COMPOSABLES
      */
     const route = useRoute();
-
     /**
      * STATE
      */
     const id = route.params.id as string;
-
     /**
      * QUERIES
      */
     const poolActivitiesQuery =
-      props.poolActivityType === PoolActivityTab.ALL_ACTIVITY
+      props.poolActivityType === PoolTransactionsTab.ALL_ACTIVITY
         ? usePoolActivitiesQuery(id)
         : usePoolUserActivitiesQuery(id);
-
     /**
      * COMPUTED
      */
@@ -75,26 +72,21 @@ export default defineComponent({
           )
         : []
     );
-
     const isLoadingPoolActivities = computed(
       () => poolActivitiesQuery.isLoading.value
     );
-
     const poolActivitiesHasNextPage = computed(
       () => poolActivitiesQuery.hasNextPage?.value
     );
-
     const poolActivitiesIsFetchingNextPage = computed(
       () => poolActivitiesQuery.isFetchingNextPage?.value
     );
-
     /**
      * METHODS
      */
     function loadMorePoolActivities() {
       poolActivitiesQuery.fetchNextPage.value();
     }
-
     return {
       // computed
       isLoadingPoolActivities,
@@ -104,7 +96,7 @@ export default defineComponent({
       // methods
       loadMorePoolActivities,
       // constants
-      PoolActivityTab
+      PoolTransactionsTab
     };
   }
 });

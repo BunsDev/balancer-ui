@@ -87,18 +87,22 @@
 <script lang="ts">
 import { PropType, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { formatDistanceToNow } from 'date-fns';
+import { getAddress } from '@ethersproject/address';
+
 import useTokens from '@/composables/useTokens';
 import useNumbers from '@/composables/useNumbers';
-import { getAddress } from '@ethersproject/address';
+import useBreakpoints from '@/composables/useBreakpoints';
+
 import {
   PoolActivity,
   PoolActivityType
 } from '@/services/balancer/subgraph/types';
-import { ColumnDefinition } from '@/components/_global/BalTable/BalTable.vue';
-import { formatDistanceToNow } from 'date-fns';
 import useWeb3 from '@/services/web3/useWeb3';
-import useBreakpoints from '@/composables/useBreakpoints';
+
 import { bnum } from '@/lib/utils';
+
+import { ColumnDefinition } from '@/components/_global/BalTable/BalTable.vue';
 
 type TokenAmount = {
   address: string;
